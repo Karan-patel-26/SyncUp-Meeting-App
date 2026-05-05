@@ -10,6 +10,7 @@ import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/user.routes';
 import meetingRoutes from './routes/meeting.routes';
 import { setupMeetingSockets } from './sockets/meeting.socket';
+import { connectRedis } from './config/redis';
 
 // Load environment variables
 dotenv.config();
@@ -47,8 +48,9 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/intern
 
 mongoose
   .connect(MONGODB_URI)
-  .then(() => {
+  .then(async () => {
     console.log('Successfully connected to MongoDB');
+    await connectRedis();
     httpServer.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
     });

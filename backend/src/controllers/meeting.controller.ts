@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { Meeting } from '../models/Meeting';
+import { invalidateCache } from '../middlewares/cache.middleware';
 
 export const createMeeting = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -19,6 +20,9 @@ export const createMeeting = async (req: Request, res: Response): Promise<void> 
     });
 
     await meeting.save();
+    
+    // Invalidate the "my meetings" cache for this user
+    await invalidateCache(`*__/api/meetings__${userId}*`);
 
     res.status(201).json({ message: 'Meeting created successfully', meeting });
   } catch (error) {
@@ -85,6 +89,10 @@ export const updateMeetingStatus = async (req: Request, res: Response): Promise<
     if (status === 'completed' && !meeting.endTime) meeting.endTime = new Date();
 
     await meeting.save();
+
+    // Invalidate caches
+    await invalidateCache(`*__/api/meetings__${userId}*`);
+    await invalidateCache(`*__/api/meetings/${id}__*`);
 
     res.status(200).json({ message: 'Meeting status updated', meeting });
   } catch (error) {

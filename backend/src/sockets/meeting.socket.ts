@@ -1,15 +1,21 @@
 import { Server, Socket } from 'socket.io';
+import { redisClient } from '../config/redis';
 
 export const setupMeetingSockets = (io: Server) => {
   io.on('connection', (socket: Socket) => {
     
     // Join a specific meeting room
-    socket.on('join-room', (roomId: string, userId: string) => {
+    socket.on('join-room', async (roomId: string, userId: string) => {
       socket.join(roomId);
+      
+      // Store presence in Redis
+      await redisClient.hSet('presence', userId, socket.id);
+      
       socket.to(roomId).emit('user-connected', userId);
 
       // Handle disconnection from the room
-      socket.on('disconnect', () => {
+      socket.on('disconnect', async () => {
+        await redisClient.hDel('presence', userId);
         socket.to(roomId).emit('user-disconnected', userId);
       });
     });
