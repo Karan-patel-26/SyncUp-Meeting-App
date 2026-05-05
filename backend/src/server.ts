@@ -3,8 +3,10 @@ import mongoose from 'mongoose';
 import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
+import cookieParser from 'cookie-parser';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
+import authRoutes from './routes/auth.routes';
 
 // Load environment variables
 dotenv.config();
@@ -20,10 +22,12 @@ const io = new Server(httpServer, {
 
 // Middlewares
 app.use(helmet());
-app.use(cors());
+app.use(cors({ origin: 'http://localhost:5173', credentials: true })); // Setup correct CORS for cookies
 app.use(express.json());
+app.use(cookieParser());
 
 // Routes
+app.use('/api/auth', authRoutes);
 app.get('/api/health', (req: Request, res: Response) => {
   res.status(200).json({ status: 'OK', message: 'Backend is running' });
 });
