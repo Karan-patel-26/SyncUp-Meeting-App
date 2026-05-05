@@ -8,6 +8,8 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/user.routes';
+import meetingRoutes from './routes/meeting.routes';
+import { setupMeetingSockets } from './sockets/meeting.socket';
 
 // Load environment variables
 dotenv.config();
@@ -30,18 +32,14 @@ app.use(cookieParser());
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/meetings', meetingRoutes);
+
 app.get('/api/health', (req: Request, res: Response) => {
   res.status(200).json({ status: 'OK', message: 'Backend is running' });
 });
 
 // Socket.io connection logic
-io.on('connection', (socket) => {
-  console.log('A user connected:', socket.id);
-
-  socket.on('disconnect', () => {
-    console.log('User disconnected:', socket.id);
-  });
-});
+setupMeetingSockets(io);
 
 // Database Connection
 const PORT = process.env.PORT || 5000;
