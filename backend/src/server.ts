@@ -9,6 +9,7 @@ import { Server } from 'socket.io';
 import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/user.routes';
 import meetingRoutes from './routes/meeting.routes';
+import messageRoutes from './routes/message.routes';
 import { setupMeetingSockets } from './sockets/meeting.socket';
 import { connectRedis } from './config/redis';
 
@@ -34,6 +35,7 @@ app.use(cookieParser());
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/meetings', meetingRoutes);
+app.use('/api/messages', messageRoutes);
 
 app.get('/api/health', (req: Request, res: Response) => {
   res.status(200).json({ status: 'OK', message: 'Backend is running' });

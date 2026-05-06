@@ -1,5 +1,6 @@
 import { Server, Socket } from 'socket.io';
 import { redisClient } from '../config/redis';
+import { Message } from '../models/Message';
 
 export const setupMeetingSockets = (io: Server) => {
   io.on('connection', (socket: Socket) => {
@@ -33,6 +34,34 @@ export const setupMeetingSockets = (io: Server) => {
     // Relay ICE Candidates
     socket.on('ice-candidate', (candidate: any, roomId: string, toId: string) => {
       socket.to(roomId).emit('ice-candidate', candidate, socket.id);
+    });
+
+    // Chat Message
+    socket.on('send-message', async (roomId: string, senderId: string, text: string) => {
+      try {
+        // Save to database
+        const newMessage = await Message.create({
+          meetingId: roomId,
+          senderId,
+          text
+        });
+        
+        // Broadcast to room including the sender (if needed) or let client handle sender msg
+        // Usually, the sender might optimistically render, but we can broadcast to everyone
+        io.to(roomId).emit('receive-message', newMessage);
+      } catch (error) {
+        console.error('Error saving message via socket:', error);
+      }
+    });
+
+    // Raise Hand
+    socket.on('raise-hand', (roomId: string, userId: string) => {
+      socket.to(roomId).emit('user-raised-hand', userId);
+    });
+
+    // Lower Hand
+    socket.on('lower-hand', (roomId: string, userId: string) => {
+      socket.to(roomId).emit('user-lowered-hand', userId);
     });
 
   });
