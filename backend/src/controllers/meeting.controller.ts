@@ -5,10 +5,11 @@ import { invalidateCache } from '../middlewares/cache.middleware';
 import { generateMeetingSummary } from '../services/ai.service';
 import cloudinary from '../config/cloudinary';
 import streamifier from 'streamifier';
+import bcrypt from 'bcryptjs';
 
 export const createMeeting = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { title, description } = req.body;
+    const { title, description, scheduledAt, password, waitingRoom } = req.body;
     const userId = req.userId;
 
     if (!title) {
@@ -16,9 +17,17 @@ export const createMeeting = async (req: Request, res: Response): Promise<void> 
       return;
     }
 
+    let hashedPassword = undefined;
+    if (password) {
+      hashedPassword = await bcrypt.hash(password, 10);
+    }
+
     const meeting = new Meeting({
       title,
       description,
+      scheduledAt,
+      password: hashedPassword,
+      waitingRoom: waitingRoom || false,
       host: userId,
       participants: [userId], // Add host to participants by default
     });
@@ -203,5 +212,34 @@ export const summarizeMeeting = async (req: Request, res: Response): Promise<voi
   } catch (error) {
     console.error('Error in summarizeMeeting:', error);
     res.status(500).json({ message: 'Server error during AI summarization' });
+  }
+};
+
+export const verifyMeetingAccess = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { password } = req.body;
+
+    const meeting = await Meeting.findById(id);
+    if (!meeting) {
+      res.status(404).json({ message: 'Meeting not found' });
+      return;
+    }
+
+    if (meeting.password) {
+      if (!password) {
+        res.status(401).json({ message: 'Password required' });
+        return;
+      }
+      const isMatch = await bcrypt.compare(password, meeting.password);
+      if (!isMatch) {
+        res.status(401).json({ message: 'Invalid password' });
+        return;
+      }
+    }
+
+    res.status(200).json({ message: 'Access granted' });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error verifying access' });
   }
 };

@@ -15,12 +15,18 @@ export const CreateMeetingModal = ({ isOpen, onClose, onMeetingCreated }: Create
     title: '',
     description: '',
     scheduledAt: '',
+    password: '',
+    waitingRoom: false,
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value, type } = e.target as HTMLInputElement;
+    setFormData({ 
+      ...formData, 
+      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value 
+    });
     setError('');
   };
 
@@ -33,7 +39,7 @@ export const CreateMeetingModal = ({ isOpen, onClose, onMeetingCreated }: Create
       const response = await api.post('/meetings', formData);
       onMeetingCreated(response.data);
       onClose(); // Close modal on success
-      setFormData({ title: '', description: '', scheduledAt: '' }); // reset
+      setFormData({ title: '', description: '', scheduledAt: '', password: '', waitingRoom: false }); // reset
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to create meeting.');
     } finally {
@@ -80,6 +86,29 @@ export const CreateMeetingModal = ({ isOpen, onClose, onMeetingCreated }: Create
           onChange={handleChange}
           required
         />
+
+        <Input
+          label="Meeting Password (Optional)"
+          name="password"
+          type="password"
+          placeholder="Leave blank for no password"
+          value={formData.password}
+          onChange={handleChange}
+        />
+
+        <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.5rem' }}>
+          <input 
+            type="checkbox" 
+            id="waitingRoom" 
+            name="waitingRoom" 
+            checked={formData.waitingRoom}
+            onChange={handleChange}
+            style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+          />
+          <label htmlFor="waitingRoom" className="form-label" style={{ marginBottom: 0, cursor: 'pointer' }}>
+            Enable Waiting Room (Host must admit participants)
+          </label>
+        </div>
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1rem' }}>
           <button type="button" className="btn-secondary" onClick={onClose} disabled={isLoading}>

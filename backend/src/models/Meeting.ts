@@ -45,6 +45,13 @@ const meetingSchema = new Schema<IMeeting>(
       type: [String],
       default: [],
     },
+    password: {
+      type: String,
+    },
+    waitingRoom: {
+      type: Boolean,
+      default: false,
+    },
     startTime: {
       type: Date,
     },

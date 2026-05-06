@@ -125,6 +125,22 @@ export const setupMeetingSockets = (io: Server) => {
       socket.to(roomId).emit('notes-update', delta);
     });
 
+    // Waiting Room Logic
+    socket.on('join-waiting-room', (roomId: string, user: any) => {
+      socket.join(`waiting:${roomId}`);
+      // Notify the host (we assume host is already in the main room)
+      socket.to(roomId).emit('participant-waiting', user);
+    });
+
+    socket.on('admit-user', (roomId: string, userId: string) => {
+      // Notify the specific user in the waiting room
+      io.to(`waiting:${roomId}`).emit('access-granted', userId);
+    });
+
+    socket.on('deny-user', (roomId: string, userId: string) => {
+      io.to(`waiting:${roomId}`).emit('access-denied', userId);
+    });
+
     // Admin Actions: Mute User
     socket.on('mute-user', (roomId: string, targetUserId: string) => {
       // Broadcast to the room so everyone knows they are muted, 

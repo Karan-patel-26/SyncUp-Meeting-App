@@ -1,4 +1,4 @@
-import { X, MicOff, UserMinus } from 'lucide-react';
+import { X, MicOff, UserMinus, Check, Ban } from 'lucide-react';
 import { socket } from '../api/socket';
 
 interface Participant {
@@ -10,6 +10,7 @@ interface Participant {
 interface ParticipantsListProps {
   roomId: string;
   participants: Participant[];
+  waitingParticipants?: Participant[];
   isCurrentUserHost: boolean;
   onClose: () => void;
 }
@@ -17,6 +18,7 @@ interface ParticipantsListProps {
 export const ParticipantsList = ({ 
   roomId, 
   participants, 
+  waitingParticipants = [],
   isCurrentUserHost, 
   onClose 
 }: ParticipantsListProps) => {
@@ -29,6 +31,14 @@ export const ParticipantsList = ({
     socket.emit('kick-user', roomId, targetUserId);
   };
 
+  const handleAdmit = (targetUserId: string) => {
+    socket.emit('admit-user', roomId, targetUserId);
+  };
+
+  const handleDeny = (targetUserId: string) => {
+    socket.emit('deny-user', roomId, targetUserId);
+  };
+
   return (
     <div className="participants-panel">
       <div className="chat-header">
@@ -39,39 +49,64 @@ export const ParticipantsList = ({
       </div>
 
       <div className="chat-messages" style={{ padding: 0 }}>
-        {participants.map((p) => (
-          <div key={p.id} className="participant-item">
-            <div className="participant-info">
-              <div className="participant-avatar">
-                {p.fullName.charAt(0).toUpperCase()}
+        {isCurrentUserHost && waitingParticipants.length > 0 && (
+          <div className="waiting-room-section">
+            <h4 className="section-title">WAITING ROOM ({waitingParticipants.length})</h4>
+            {waitingParticipants.map((p) => (
+              <div key={p.id} className="participant-item waiting">
+                <div className="participant-info">
+                  <div className="participant-name">{p.fullName}</div>
+                </div>
+                <div className="participant-actions">
+                  <button className="action-btn admit" onClick={() => handleAdmit(p.id)} title="Admit">
+                    <Check size={16} color="#10b981" />
+                  </button>
+                  <button className="action-btn danger" onClick={() => handleDeny(p.id)} title="Deny">
+                    <Ban size={16} />
+                  </button>
+                </div>
               </div>
-              <div>
-                <span className="participant-name">{p.fullName}</span>
-                {p.isHost && <span className="host-badge">Host</span>}
-              </div>
-            </div>
-
-            {isCurrentUserHost && !p.isHost && (
-              <div className="participant-actions">
-                <button 
-                  className="action-btn" 
-                  title="Mute for everyone"
-                  onClick={() => handleMute(p.id)}
-                >
-                  <MicOff size={16} />
-                </button>
-                <button 
-                  className="action-btn danger" 
-                  title="Remove from meeting"
-                  onClick={() => handleKick(p.id)}
-                >
-                  <UserMinus size={16} />
-                </button>
-              </div>
-            )}
+            ))}
           </div>
-        ))}
+        )}
+
+        <div className="participants-list-section">
+          {isCurrentUserHost && waitingParticipants.length > 0 && <h4 className="section-title">IN MEETING</h4>}
+          {participants.map((p) => (
+            <div key={p.id} className="participant-item">
+              <div className="participant-info">
+                <div className="participant-avatar">
+                  {p.fullName.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <span className="participant-name">{p.fullName}</span>
+                  {p.isHost && <span className="host-badge">Host</span>}
+                </div>
+              </div>
+
+              {isCurrentUserHost && !p.isHost && (
+                <div className="participant-actions">
+                  <button 
+                    className="action-btn" 
+                    title="Mute for everyone"
+                    onClick={() => handleMute(p.id)}
+                  >
+                    <MicOff size={16} />
+                  </button>
+                  <button 
+                    className="action-btn danger" 
+                    title="Remove from meeting"
+                    onClick={() => handleKick(p.id)}
+                  >
+                    <UserMinus size={16} />
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
 };
+
