@@ -14,6 +14,7 @@ import { setupMeetingSockets } from './sockets/meeting.socket';
 import { connectRedis, isRedisConnected } from './config/redis';
 import rateLimit from 'express-rate-limit';
 import logger from './utils/logger';
+import compression from 'compression';
 
 // Load environment variables
 dotenv.config();
@@ -43,6 +44,7 @@ app.use(cors({
   credentials: true 
 }));
 app.use(limiter);
+app.use(compression());
 app.use(express.json());
 app.use(cookieParser());
 

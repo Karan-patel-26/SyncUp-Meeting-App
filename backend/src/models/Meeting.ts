@@ -6,6 +6,10 @@ export interface IMeeting extends Document {
   host: mongoose.Types.ObjectId;
   participants: mongoose.Types.ObjectId[];
   status: 'scheduled' | 'active' | 'completed';
+  summary?: string;
+  actionItems?: string[];
+  password?: string;
+  waitingRoom: boolean;
   startTime?: Date;
   endTime?: Date;
 }
