@@ -12,6 +12,9 @@ import { AudioIndicator } from '../components/AudioIndicator';
 import { LiveCaptions } from '../components/LiveCaptions';
 import { Whiteboard } from '../components/Whiteboard';
 import { SharedNotes } from '../components/SharedNotes';
+import { VideoEffectsMenu } from '../components/VideoEffectsMenu';
+import { videoEffectService } from '../services/videoEffect.service';
+import type { EffectType } from '../services/videoEffect.service';
 import { Spinner } from '../components/Spinner';
 
 // ICE servers for WebRTC
@@ -48,6 +51,8 @@ const MeetingRoom = () => {
   const [isCaptionsEnabled, setIsCaptionsEnabled] = useState(false);
   const [isWhiteboardOpen, setIsWhiteboardOpen] = useState(false);
   const [isNotesOpen, setIsNotesOpen] = useState(false);
+  const [isEffectsOpen, setIsEffectsOpen] = useState(false);
+  const [activeEffect, setActiveEffect] = useState<EffectType>('none');
   const [videoQuality, setVideoQuality] = useState<'360p' | '720p'>('720p');
   const [meetingHostId, setMeetingHostId] = useState<string | null>(null);
   const [error, setError] = useState('');
@@ -60,6 +65,7 @@ const MeetingRoom = () => {
   const recordedChunksRef = useRef<Blob[]>([]);
   const recognitionRef = useRef<any>(null);
   const transcriptRef = useRef<string[]>([]);
+  const rawStreamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
     if (!roomId || !user) return;
@@ -88,6 +94,7 @@ const MeetingRoom = () => {
         });
         setLocalStream(stream);
         streamRef.current = stream;
+        rawStreamRef.current = stream;
         
         if (localVideoRef.current) {
           localVideoRef.current.srcObject = stream;
@@ -421,6 +428,33 @@ const MeetingRoom = () => {
     setIsCaptionsEnabled(!isCaptionsEnabled);
   };
 
+  const handleEffectChange = async (effect: EffectType) => {
+    setActiveEffect(effect);
+    if (!rawStreamRef.current) return;
+
+    try {
+      let nextStream: MediaStream;
+      if (effect === 'none') {
+        nextStream = rawStreamRef.current;
+        videoEffectService.stopEffect();
+      } else {
+        nextStream = await videoEffectService.startEffect(rawStreamRef.current, effect);
+      }
+
+      setLocalStream(nextStream);
+      if (localVideoRef.current) localVideoRef.current.srcObject = nextStream;
+
+      // Update tracks for all peers
+      const videoTrack = nextStream.getVideoTracks()[0];
+      Object.values(peersRef.current).forEach(peer => {
+        const sender = peer.getSenders().find(s => s.track?.kind === 'video');
+        if (sender) sender.replaceTrack(videoTrack);
+      });
+    } catch (err) {
+      console.error('Failed to apply video effect', err);
+    }
+  };
+
   const handleLeave = async () => {
     if (meetingHostId === user?.id && transcriptRef.current.length > 0) {
       try {
@@ -513,19 +547,29 @@ const MeetingRoom = () => {
             isCaptionsEnabled={isCaptionsEnabled}
             isWhiteboardOpen={isWhiteboardOpen}
             isNotesOpen={isNotesOpen}
+            isEffectsOpen={isEffectsOpen}
             onToggleMute={toggleMute} 
             onToggleVideo={toggleVideo} 
-            onToggleChat={() => { setIsChatOpen(!isChatOpen); setIsParticipantsOpen(false); setIsNotesOpen(false); }}
-            onToggleParticipants={() => { setIsParticipantsOpen(!isParticipantsOpen); setIsChatOpen(false); setIsNotesOpen(false); }}
+            onToggleChat={() => { setIsChatOpen(!isChatOpen); setIsParticipantsOpen(false); setIsNotesOpen(false); setIsEffectsOpen(false); }}
+            onToggleParticipants={() => { setIsParticipantsOpen(!isParticipantsOpen); setIsChatOpen(false); setIsNotesOpen(false); setIsEffectsOpen(false); }}
             onToggleHand={toggleHand}
             onToggleScreenShare={toggleScreenShare}
             onToggleRecording={toggleRecording}
             onToggleCaptions={toggleCaptions}
             onToggleWhiteboard={() => setIsWhiteboardOpen(!isWhiteboardOpen)}
-            onToggleNotes={() => { setIsNotesOpen(!isNotesOpen); setIsChatOpen(false); setIsParticipantsOpen(false); }}
+            onToggleNotes={() => { setIsNotesOpen(!isNotesOpen); setIsChatOpen(false); setIsParticipantsOpen(false); setIsEffectsOpen(false); }}
+            onToggleEffects={() => { setIsEffectsOpen(!isEffectsOpen); setIsChatOpen(false); setIsParticipantsOpen(false); setIsNotesOpen(false); }}
             onLeave={handleLeave} 
           />
         </div>
+
+        {isEffectsOpen && (
+          <VideoEffectsMenu 
+            activeEffect={activeEffect} 
+            onSelectEffect={handleEffectChange}
+            onClose={() => setIsEffectsOpen(false)}
+          />
+        )}
 
         {isNotesOpen && roomId && <SharedNotes roomId={roomId} onClose={() => setIsNotesOpen(false)} />}
         {isWhiteboardOpen && roomId && (

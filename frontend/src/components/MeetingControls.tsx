@@ -1,4 +1,4 @@
-import { Mic, MicOff, Video, VideoOff, PhoneOff, MessageSquare, Hand, Users, Monitor, Circle, ClosedCaption, Palette, FileText } from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, PhoneOff, MessageSquare, Hand, Users, Monitor, Circle, ClosedCaption, Palette, FileText, Wand2 } from 'lucide-react';
 
 interface MeetingControlsProps {
   isMuted: boolean;
@@ -11,6 +11,7 @@ interface MeetingControlsProps {
   isCaptionsEnabled: boolean;
   isWhiteboardOpen: boolean;
   isNotesOpen: boolean;
+  isEffectsOpen: boolean;
   onToggleMute: () => void;
   onToggleVideo: () => void;
   onToggleChat: () => void;
@@ -21,6 +22,7 @@ interface MeetingControlsProps {
   onToggleCaptions: () => void;
   onToggleWhiteboard: () => void;
   onToggleNotes: () => void;
+  onToggleEffects: () => void;
   onLeave: () => void;
 }
 
@@ -35,6 +37,7 @@ export const MeetingControls = ({
   isCaptionsEnabled,
   isWhiteboardOpen,
   isNotesOpen,
+  isEffectsOpen,
   onToggleMute,
   onToggleVideo,
   onToggleChat,
@@ -45,6 +48,7 @@ export const MeetingControls = ({
   onToggleCaptions,
   onToggleWhiteboard,
   onToggleNotes,
+  onToggleEffects,
   onLeave,
 }: MeetingControlsProps) => {
   return (
@@ -63,6 +67,14 @@ export const MeetingControls = ({
         title={isVideoOff ? 'Turn on camera' : 'Turn off camera'}
       >
         {isVideoOff ? <VideoOff size={24} /> : <Video size={24} />}
+      </button>
+
+      <button 
+        className={`control-btn ${isEffectsOpen ? 'active' : ''}`} 
+        onClick={onToggleEffects}
+        title="Video Effects"
+      >
+        <Wand2 size={24} />
       </button>
 
       <button 
