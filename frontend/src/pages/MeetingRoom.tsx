@@ -11,6 +11,7 @@ import { ParticipantsList } from '../components/ParticipantsList';
 import { AudioIndicator } from '../components/AudioIndicator';
 import { LiveCaptions } from '../components/LiveCaptions';
 import { Whiteboard } from '../components/Whiteboard';
+import { SharedNotes } from '../components/SharedNotes';
 import { Spinner } from '../components/Spinner';
 
 // ICE servers for WebRTC
@@ -46,6 +47,7 @@ const MeetingRoom = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [isCaptionsEnabled, setIsCaptionsEnabled] = useState(false);
   const [isWhiteboardOpen, setIsWhiteboardOpen] = useState(false);
+  const [isNotesOpen, setIsNotesOpen] = useState(false);
   const [videoQuality, setVideoQuality] = useState<'360p' | '720p'>('720p');
   const [meetingHostId, setMeetingHostId] = useState<string | null>(null);
   const [error, setError] = useState('');
@@ -510,19 +512,22 @@ const MeetingRoom = () => {
             isRecording={isRecording}
             isCaptionsEnabled={isCaptionsEnabled}
             isWhiteboardOpen={isWhiteboardOpen}
+            isNotesOpen={isNotesOpen}
             onToggleMute={toggleMute} 
             onToggleVideo={toggleVideo} 
-            onToggleChat={() => { setIsChatOpen(!isChatOpen); setIsParticipantsOpen(false); }}
-            onToggleParticipants={() => { setIsParticipantsOpen(!isParticipantsOpen); setIsChatOpen(false); }}
+            onToggleChat={() => { setIsChatOpen(!isChatOpen); setIsParticipantsOpen(false); setIsNotesOpen(false); }}
+            onToggleParticipants={() => { setIsParticipantsOpen(!isParticipantsOpen); setIsChatOpen(false); setIsNotesOpen(false); }}
             onToggleHand={toggleHand}
             onToggleScreenShare={toggleScreenShare}
             onToggleRecording={toggleRecording}
             onToggleCaptions={toggleCaptions}
             onToggleWhiteboard={() => setIsWhiteboardOpen(!isWhiteboardOpen)}
+            onToggleNotes={() => { setIsNotesOpen(!isNotesOpen); setIsChatOpen(false); setIsParticipantsOpen(false); }}
             onLeave={handleLeave} 
           />
         </div>
 
+        {isNotesOpen && roomId && <SharedNotes roomId={roomId} onClose={() => setIsNotesOpen(false)} />}
         {isWhiteboardOpen && roomId && (
           <Whiteboard roomId={roomId} onClose={() => setIsWhiteboardOpen(false)} />
         )}

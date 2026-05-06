@@ -2,6 +2,8 @@ import { Server, Socket } from 'socket.io';
 import { redisClient } from '../config/redis';
 import { Message } from '../models/Message';
 
+const roomNotes: { [roomId: string]: string } = {};
+
 export const setupMeetingSockets = (io: Server) => {
   io.on('connection', (socket: Socket) => {
     
@@ -13,6 +15,11 @@ export const setupMeetingSockets = (io: Server) => {
       await redisClient.hSet('presence', userId, socket.id);
       
       socket.to(roomId).emit('user-connected', userId);
+
+      // Send current notes to the new user
+      if (roomNotes[roomId]) {
+        socket.emit('initial-notes', roomNotes[roomId]);
+      }
 
       // Handle disconnection from the room
       socket.on('disconnect', async () => {
@@ -74,6 +81,11 @@ export const setupMeetingSockets = (io: Server) => {
 
     socket.on('clear-whiteboard', (roomId: string) => {
       socket.to(roomId).emit('clear-whiteboard');
+    });
+
+    socket.on('notes-update', (roomId: string, delta: any) => {
+      roomNotes[roomId] = delta; // In our simple relay, delta is the whole content
+      socket.to(roomId).emit('notes-update', delta);
     });
 
     // Admin Actions: Mute User

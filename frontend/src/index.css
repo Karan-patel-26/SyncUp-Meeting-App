@@ -1068,3 +1068,62 @@ button {
 .color-swatch.active {
   border-color: #5f6368;
 }
+
+/* Shared Notes Styles */
+.notes-panel {
+  width: 400px;
+  background: var(--bg-color);
+  border-left: 1px solid var(--glass-border);
+  display: flex;
+  flex-direction: column;
+  animation: slideInRight 0.3s ease;
+  z-index: 20;
+}
+
+.notes-header {
+  padding: 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.notes-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+}
+
+.quill {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.ql-toolbar {
+  border: none !important;
+  border-bottom: 1px solid var(--glass-border) !important;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.ql-container {
+  border: none !important;
+  flex: 1;
+  font-family: 'Inter', sans-serif !important;
+  font-size: 0.95rem !important;
+  color: var(--text-primary) !important;
+}
+
+.ql-editor {
+  padding: 1rem !important;
+}
+
+.ql-editor.ql-blank::before {
+  color: var(--text-secondary) !important;
+  font-style: normal !important;
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
