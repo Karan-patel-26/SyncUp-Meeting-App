@@ -38,6 +38,13 @@ const meetingSchema = new Schema<IMeeting>(
       enum: ['scheduled', 'active', 'completed'],
       default: 'scheduled',
     },
+    summary: {
+      type: String,
+    },
+    actionItems: {
+      type: [String],
+      default: [],
+    },
     startTime: {
       type: Date,
     },

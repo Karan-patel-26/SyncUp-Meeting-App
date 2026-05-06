@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { Meeting } from '../models/Meeting';
 import { Recording } from '../models/Recording';
 import { invalidateCache } from '../middlewares/cache.middleware';
+import { generateMeetingSummary } from '../services/ai.service';
 import cloudinary from '../config/cloudinary';
 import streamifier from 'streamifier';
 
@@ -170,5 +171,37 @@ export const getRecordings = async (req: Request, res: Response): Promise<void> 
     res.status(200).json({ recordings });
   } catch (error) {
     res.status(500).json({ message: 'Server error fetching recordings' });
+  }
+};
+
+export const summarizeMeeting = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { transcript } = req.body;
+
+    if (!transcript) {
+      res.status(400).json({ message: 'Transcript is required' });
+      return;
+    }
+
+    const meeting = await Meeting.findById(id);
+    if (!meeting) {
+      res.status(404).json({ message: 'Meeting not found' });
+      return;
+    }
+
+    const { summary, actionItems } = await generateMeetingSummary(transcript);
+
+    meeting.summary = summary;
+    meeting.actionItems = actionItems;
+    meeting.status = 'completed';
+    await meeting.save();
+
+    await invalidateCache(`*__/api/meetings/${id}__*`);
+
+    res.status(200).json({ message: 'Meeting summarized successfully', summary, actionItems });
+  } catch (error) {
+    console.error('Error in summarizeMeeting:', error);
+    res.status(500).json({ message: 'Server error during AI summarization' });
   }
 };

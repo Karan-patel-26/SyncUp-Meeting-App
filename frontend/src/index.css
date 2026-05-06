@@ -8,6 +8,7 @@
   --text-secondary: #a0aec0;
   
   --primary-color: #6366f1; /* Indigo */
+  --primary-color-rgb: 99, 102, 241;
   --primary-hover: #4f46e5;
   --secondary-color: #10b981; /* Emerald */
   
@@ -949,4 +950,36 @@ button {
   height: 6px;
   background: var(--primary-color);
   border-radius: 50%;
+}
+
+/* AI Summary Styles */
+.ai-summary-view {
+  background: rgba(var(--primary-color-rgb), 0.05);
+  border: 1px solid rgba(var(--primary-color-rgb), 0.1);
+  border-radius: 12px;
+  padding: 1rem;
+  margin-top: 0.5rem;
+  animation: slideUp 0.3s ease;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.summary-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  padding-bottom: 0.5rem;
+}
+
+.action-items-list {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed rgba(0, 0, 0, 0.1);
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }

@@ -55,6 +55,7 @@ const MeetingRoom = () => {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordedChunksRef = useRef<Blob[]>([]);
   const recognitionRef = useRef<any>(null);
+  const transcriptRef = useRef<string[]>([]);
 
   useEffect(() => {
     if (!roomId || !user) return;
@@ -186,6 +187,8 @@ const MeetingRoom = () => {
 
       socket.on('transcription-chunk', (userId: string, text: string) => {
         setCaptions(prev => ({ ...prev, [userId]: text }));
+        const name = participantsMapRef.current[userId] || 'Participant';
+        transcriptRef.current.push(`${name}: ${text}`);
       });
 
       socket.on('mute-remote-user', (targetUserId: string) => {
@@ -414,7 +417,16 @@ const MeetingRoom = () => {
     setIsCaptionsEnabled(!isCaptionsEnabled);
   };
 
-  const handleLeave = () => {
+  const handleLeave = async () => {
+    if (meetingHostId === user?.id && transcriptRef.current.length > 0) {
+      try {
+        await api.post(`/meetings/${roomId}/summarize`, {
+          transcript: transcriptRef.current.join('\n')
+        });
+      } catch (err) {
+        console.error('Failed to summarize meeting', err);
+      }
+    }
     navigate('/');
   };
 
