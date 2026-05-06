@@ -1,13 +1,14 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Hand } from 'lucide-react';
+import { Hand, Monitor } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { socket } from '../api/socket';
 import api from '../api/axios';
 import { MeetingControls } from '../components/MeetingControls';
 import { ChatPanel } from '../components/ChatPanel';
 import { ParticipantsList } from '../components/ParticipantsList';
+import { AudioIndicator } from '../components/AudioIndicator';
 import { Spinner } from '../components/Spinner';
 
 // ICE servers for WebRTC
@@ -29,6 +30,7 @@ const MeetingRoom = () => {
   const navigate = useNavigate();
 
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+  const [screenStream, setScreenStream] = useState<MediaStream | null>(null);
   const [remoteStreams, setRemoteStreams] = useState<{ [id: string]: MediaStream }>({});
   const [activeParticipants, setActiveParticipants] = useState<ParticipantInfo[]>([]);
   const [raisedHands, setRaisedHands] = useState<{ [id: string]: boolean }>({});
@@ -37,40 +39,41 @@ const MeetingRoom = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isParticipantsOpen, setIsParticipantsOpen] = useState(false);
   const [isHandRaised, setIsHandRaised] = useState(false);
+  const [isScreenSharing, setIsScreenSharing] = useState(false);
+  const [videoQuality, setVideoQuality] = useState<'360p' | '720p'>('720p');
   const [meetingHostId, setMeetingHostId] = useState<string | null>(null);
   const [error, setError] = useState('');
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const peersRef = useRef<{ [id: string]: RTCPeerConnection }>({});
   const streamRef = useRef<MediaStream | null>(null);
-  const participantsMapRef = useRef<{ [id: string]: string }>({}); // Mapping of id to fullName
+  const participantsMapRef = useRef<{ [id: string]: string }>({});
 
   useEffect(() => {
     if (!roomId || !user) return;
 
     const initialize = async () => {
       try {
-        // 1. Fetch meeting details first to get names and host
         const res = await api.get(`/meetings/${roomId}`);
         const meeting = res.data.meeting;
         setMeetingHostId(meeting.host._id || meeting.host);
         
-        // Build participants map for name resolution
         const pMap: { [id: string]: string } = {};
         meeting.participants.forEach((p: any) => {
           pMap[p._id] = p.fullName;
         });
         participantsMapRef.current = pMap;
 
-        // Add self to active participants
         setActiveParticipants([{
           id: user.id,
           fullName: user.fullName,
           isHost: (meeting.host._id || meeting.host) === user.id
         }]);
 
-        // 2. Initialize Media
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { width: 1280, height: 720 }, 
+          audio: true 
+        });
         setLocalStream(stream);
         streamRef.current = stream;
         
@@ -90,9 +93,6 @@ const MeetingRoom = () => {
       socket.emit('join-room', roomId, user.id);
 
       socket.on('user-connected', async (userId: string) => {
-        console.log('User connected:', userId);
-        
-        // Add to active participants list
         const name = participantsMapRef.current[userId] || 'Anonymous';
         setActiveParticipants(prev => {
           if (prev.find(p => p.id === userId)) return prev;
@@ -136,18 +136,10 @@ const MeetingRoom = () => {
             delete next[userId];
             return next;
           });
-
-          setRaisedHands((prev) => {
-            const next = { ...prev };
-            delete next[userId];
-            return next;
-          });
-
           setActiveParticipants(prev => prev.filter(p => p.id !== userId));
         }
       });
 
-      // Interactive Events
       socket.on('hand-raised', (userId: string) => {
         setRaisedHands((prev) => ({ ...prev, [userId]: true }));
       });
@@ -156,10 +148,8 @@ const MeetingRoom = () => {
         setRaisedHands((prev) => ({ ...prev, [userId]: false }));
       });
 
-      // Admin Actions
       socket.on('mute-remote-user', (targetUserId: string) => {
         if (targetUserId === user.id) {
-          // It's me! Hard mute.
           if (streamRef.current) {
             const audioTrack = streamRef.current.getAudioTracks()[0];
             if (audioTrack && audioTrack.enabled) {
@@ -232,8 +222,8 @@ const MeetingRoom = () => {
   };
 
   const toggleMute = () => {
-    if (localStream) {
-      const audioTrack = localStream.getAudioTracks()[0];
+    if (streamRef.current) {
+      const audioTrack = streamRef.current.getAudioTracks()[0];
       if (audioTrack) {
         audioTrack.enabled = !audioTrack.enabled;
         setIsMuted(!audioTrack.enabled);
@@ -258,6 +248,65 @@ const MeetingRoom = () => {
       socket.emit('raise-hand', roomId, user?.id);
     } else {
       socket.emit('lower-hand', roomId, user?.id);
+    }
+  };
+
+  const toggleScreenShare = async () => {
+    if (!isScreenSharing) {
+      try {
+        const screen = await navigator.mediaDevices.getDisplayMedia({ video: true });
+        setScreenStream(screen);
+        setIsScreenSharing(true);
+        
+        const videoTrack = screen.getVideoTracks()[0];
+        
+        // Swap tracks in all peer connections
+        Object.values(peersRef.current).forEach(peer => {
+          const sender = peer.getSenders().find(s => s.track?.kind === 'video');
+          if (sender) sender.replaceTrack(videoTrack);
+        });
+
+        if (localVideoRef.current) localVideoRef.current.srcObject = screen;
+
+        videoTrack.onended = () => stopScreenShare(screen);
+      } catch (err) {
+        console.error('Failed to share screen', err);
+      }
+    } else {
+      if (screenStream) stopScreenShare(screenStream);
+    }
+  };
+
+  const stopScreenShare = (screen: MediaStream) => {
+    screen.getTracks().forEach(track => track.stop());
+    setScreenStream(null);
+    setIsScreenSharing(false);
+
+    if (localStream) {
+      const videoTrack = localStream.getVideoTracks()[0];
+      Object.values(peersRef.current).forEach(peer => {
+        const sender = peer.getSenders().find(s => s.track?.kind === 'video');
+        if (sender) sender.replaceTrack(videoTrack);
+      });
+      if (localVideoRef.current) localVideoRef.current.srcObject = localStream;
+    }
+  };
+
+  const toggleQuality = async () => {
+    const newQuality = videoQuality === '720p' ? '360p' : '720p';
+    setVideoQuality(newQuality);
+    
+    if (localStream) {
+      const videoTrack = localStream.getVideoTracks()[0];
+      const constraints = newQuality === '720p' 
+        ? { width: 1280, height: 720 } 
+        : { width: 640, height: 360 };
+      
+      try {
+        await videoTrack.applyConstraints(constraints);
+      } catch (err) {
+        console.error('Failed to apply constraints', err);
+      }
     }
   };
 
@@ -297,25 +346,23 @@ const MeetingRoom = () => {
         : 'repeat(auto-fit, minmax(300px, 1fr))'
   };
 
-  const isCurrentUserHost = meetingHostId === user?.id;
-
   return (
     <div className="meeting-room">
       <div className="meeting-layout">
         <div className="video-section">
           <div className="video-grid" style={gridStyle}>
-            {/* Local Video */}
             <div className="video-container">
               <video ref={localVideoRef} autoPlay muted playsInline />
-              <div className="participant-label">You ({user?.fullName})</div>
-              {isHandRaised && (
-                <div className="hand-indicator">
-                  <Hand size={20} />
-                </div>
-              )}
+              <div className="participant-label">
+                {isScreenSharing && <Monitor size={14} style={{ marginRight: '4px' }} />}
+                You ({user?.fullName})
+              </div>
+              <AudioIndicator stream={isScreenSharing ? null : localStream} />
+              {isHandRaised && <div className="hand-indicator"><Hand size={20} /></div>}
+              {isScreenSharing && <div className="screen-share-indicator">You are sharing screen</div>}
+              <button className="quality-badge" onClick={toggleQuality}>{videoQuality}</button>
             </div>
 
-            {/* Remote Videos */}
             {Object.entries(remoteStreams).map(([peerId, stream]) => (
               <div key={peerId} className="video-container">
                 <video 
@@ -323,17 +370,12 @@ const MeetingRoom = () => {
                   autoPlay 
                   playsInline 
                   ref={(video) => {
-                    if (video && video.srcObject !== stream) {
-                      video.srcObject = stream;
-                    }
+                    if (video && video.srcObject !== stream) video.srcObject = stream;
                   }} 
                 />
                 <div className="participant-label">{participantsMapRef.current[peerId] || 'Participant'}</div>
-                {raisedHands[peerId] && (
-                  <div className="hand-indicator">
-                    <Hand size={20} />
-                  </div>
-                )}
+                <AudioIndicator stream={stream} />
+                {raisedHands[peerId] && <div className="hand-indicator"><Hand size={20} /></div>}
               </div>
             ))}
           </div>
@@ -344,30 +386,23 @@ const MeetingRoom = () => {
             isChatOpen={isChatOpen}
             isParticipantsOpen={isParticipantsOpen}
             isHandRaised={isHandRaised}
+            isScreenSharing={isScreenSharing}
             onToggleMute={toggleMute} 
             onToggleVideo={toggleVideo} 
-            onToggleChat={() => {
-              setIsChatOpen(!isChatOpen);
-              setIsParticipantsOpen(false);
-            }}
-            onToggleParticipants={() => {
-              setIsParticipantsOpen(!isParticipantsOpen);
-              setIsChatOpen(false);
-            }}
+            onToggleChat={() => { setIsChatOpen(!isChatOpen); setIsParticipantsOpen(false); }}
+            onToggleParticipants={() => { setIsParticipantsOpen(!isParticipantsOpen); setIsChatOpen(false); }}
             onToggleHand={toggleHand}
+            onToggleScreenShare={toggleScreenShare}
             onLeave={handleLeave} 
           />
         </div>
 
-        {isChatOpen && roomId && (
-          <ChatPanel roomId={roomId} onClose={() => setIsChatOpen(false)} />
-        )}
-
+        {isChatOpen && roomId && <ChatPanel roomId={roomId} onClose={() => setIsChatOpen(false)} />}
         {isParticipantsOpen && roomId && (
           <ParticipantsList 
             roomId={roomId} 
             participants={activeParticipants} 
-            isCurrentUserHost={isCurrentUserHost}
+            isCurrentUserHost={meetingHostId === user?.id}
             onClose={() => setIsParticipantsOpen(false)} 
           />
         )}

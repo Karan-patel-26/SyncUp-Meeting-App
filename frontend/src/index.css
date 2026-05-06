@@ -729,3 +729,62 @@ button {
   border-radius: 4px;
   margin-left: 0.5rem;
 }
+
+/* Audio Indicator Styles */
+.audio-indicator {
+  position: absolute;
+  bottom: 1rem;
+  right: 1rem;
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 20px;
+  padding: 4px;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 4px;
+  z-index: 20;
+}
+
+.audio-bar {
+  width: 3px;
+  background: var(--primary-color);
+  border-radius: 1px;
+  transition: height 0.1s ease;
+  min-height: 2px;
+}
+
+/* Screen Share Active State */
+.control-btn.screen-share-active {
+  background: #10b981; /* Green */
+  color: white;
+}
+
+.screen-share-indicator {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  background: #10b981;
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  z-index: 20;
+}
+
+/* Quality Badge */
+.quality-badge {
+  position: absolute;
+  top: 1rem;
+  right: 4.5rem;
+  background: rgba(0, 0, 0, 0.5);
+  color: white;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  z-index: 20;
+}

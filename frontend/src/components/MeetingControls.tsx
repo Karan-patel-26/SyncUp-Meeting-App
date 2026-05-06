@@ -1,4 +1,4 @@
-import { Mic, MicOff, Video, VideoOff, PhoneOff, MessageSquare, Hand, Users } from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, PhoneOff, MessageSquare, Hand, Users, Monitor } from 'lucide-react';
 
 interface MeetingControlsProps {
   isMuted: boolean;
@@ -6,11 +6,13 @@ interface MeetingControlsProps {
   isChatOpen: boolean;
   isParticipantsOpen: boolean;
   isHandRaised: boolean;
+  isScreenSharing: boolean;
   onToggleMute: () => void;
   onToggleVideo: () => void;
   onToggleChat: () => void;
   onToggleParticipants: () => void;
   onToggleHand: () => void;
+  onToggleScreenShare: () => void;
   onLeave: () => void;
 }
 
@@ -20,11 +22,13 @@ export const MeetingControls = ({
   isChatOpen,
   isParticipantsOpen,
   isHandRaised,
+  isScreenSharing,
   onToggleMute,
   onToggleVideo,
   onToggleChat,
   onToggleParticipants,
   onToggleHand,
+  onToggleScreenShare,
   onLeave,
 }: MeetingControlsProps) => {
   return (
@@ -52,6 +56,14 @@ export const MeetingControls = ({
         style={isHandRaised ? { backgroundColor: '#f59e0b' } : {}}
       >
         <Hand size={24} />
+      </button>
+
+      <button 
+        className={`control-btn ${isScreenSharing ? 'screen-share-active' : ''}`} 
+        onClick={onToggleScreenShare}
+        title={isScreenSharing ? 'Stop sharing' : 'Share screen'}
+      >
+        <Monitor size={24} />
       </button>
 
       <button 
