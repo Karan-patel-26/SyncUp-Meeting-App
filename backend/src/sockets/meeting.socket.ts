@@ -68,6 +68,14 @@ export const setupMeetingSockets = (io: Server) => {
       socket.to(roomId).emit('transcription-chunk', userId, text);
     });
 
+    socket.on('draw-data', (roomId: string, data: any) => {
+      socket.to(roomId).emit('draw-data', data);
+    });
+
+    socket.on('clear-whiteboard', (roomId: string) => {
+      socket.to(roomId).emit('clear-whiteboard');
+    });
+
     // Admin Actions: Mute User
     socket.on('mute-user', (roomId: string, targetUserId: string) => {
       // Broadcast to the room so everyone knows they are muted, 

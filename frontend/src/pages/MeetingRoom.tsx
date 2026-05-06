@@ -10,6 +10,7 @@ import { ChatPanel } from '../components/ChatPanel';
 import { ParticipantsList } from '../components/ParticipantsList';
 import { AudioIndicator } from '../components/AudioIndicator';
 import { LiveCaptions } from '../components/LiveCaptions';
+import { Whiteboard } from '../components/Whiteboard';
 import { Spinner } from '../components/Spinner';
 
 // ICE servers for WebRTC
@@ -44,6 +45,7 @@ const MeetingRoom = () => {
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isCaptionsEnabled, setIsCaptionsEnabled] = useState(false);
+  const [isWhiteboardOpen, setIsWhiteboardOpen] = useState(false);
   const [videoQuality, setVideoQuality] = useState<'360p' | '720p'>('720p');
   const [meetingHostId, setMeetingHostId] = useState<string | null>(null);
   const [error, setError] = useState('');
@@ -507,6 +509,7 @@ const MeetingRoom = () => {
             isScreenSharing={isScreenSharing}
             isRecording={isRecording}
             isCaptionsEnabled={isCaptionsEnabled}
+            isWhiteboardOpen={isWhiteboardOpen}
             onToggleMute={toggleMute} 
             onToggleVideo={toggleVideo} 
             onToggleChat={() => { setIsChatOpen(!isChatOpen); setIsParticipantsOpen(false); }}
@@ -515,9 +518,14 @@ const MeetingRoom = () => {
             onToggleScreenShare={toggleScreenShare}
             onToggleRecording={toggleRecording}
             onToggleCaptions={toggleCaptions}
+            onToggleWhiteboard={() => setIsWhiteboardOpen(!isWhiteboardOpen)}
             onLeave={handleLeave} 
           />
         </div>
+
+        {isWhiteboardOpen && roomId && (
+          <Whiteboard roomId={roomId} onClose={() => setIsWhiteboardOpen(false)} />
+        )}
 
         {isRecording && (
           <div className="recording-indicator">

@@ -1,4 +1,4 @@
-import { Mic, MicOff, Video, VideoOff, PhoneOff, MessageSquare, Hand, Users, Monitor, Circle, ClosedCaption } from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, PhoneOff, MessageSquare, Hand, Users, Monitor, Circle, ClosedCaption, Palette } from 'lucide-react';
 
 interface MeetingControlsProps {
   isMuted: boolean;
@@ -9,6 +9,7 @@ interface MeetingControlsProps {
   isScreenSharing: boolean;
   isRecording: boolean;
   isCaptionsEnabled: boolean;
+  isWhiteboardOpen: boolean;
   onToggleMute: () => void;
   onToggleVideo: () => void;
   onToggleChat: () => void;
@@ -17,6 +18,7 @@ interface MeetingControlsProps {
   onToggleScreenShare: () => void;
   onToggleRecording: () => void;
   onToggleCaptions: () => void;
+  onToggleWhiteboard: () => void;
   onLeave: () => void;
 }
 
@@ -29,6 +31,7 @@ export const MeetingControls = ({
   isScreenSharing,
   isRecording,
   isCaptionsEnabled,
+  isWhiteboardOpen,
   onToggleMute,
   onToggleVideo,
   onToggleChat,
@@ -37,6 +40,7 @@ export const MeetingControls = ({
   onToggleScreenShare,
   onToggleRecording,
   onToggleCaptions,
+  onToggleWhiteboard,
   onLeave,
 }: MeetingControlsProps) => {
   return (
@@ -80,6 +84,14 @@ export const MeetingControls = ({
         title={isCaptionsEnabled ? 'Disable Captions' : 'Enable Captions'}
       >
         <ClosedCaption size={24} />
+      </button>
+
+      <button 
+        className={`control-btn ${isWhiteboardOpen ? 'active' : ''}`} 
+        onClick={onToggleWhiteboard}
+        title={isWhiteboardOpen ? 'Close Whiteboard' : 'Open Whiteboard'}
+      >
+        <Palette size={24} />
       </button>
 
       <button 
