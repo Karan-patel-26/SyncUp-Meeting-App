@@ -1,14 +1,14 @@
-
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock } from 'lucide-react';
+import { User, Mail, Lock } from 'lucide-react';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import { Input } from '../components/Input';
 import { Spinner } from '../components/Spinner';
 
-const Login = () => {
+const Register = () => {
   const [formData, setFormData] = useState({
+    username: '',
     email: '',
     password: '',
   });
@@ -19,7 +19,7 @@ const Login = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
-    setError('');
+    setError(''); // Clear error when user types
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -28,13 +28,14 @@ const Login = () => {
     setError('');
 
     try {
-      const response = await api.post('/auth/login', formData);
+      const response = await api.post('/auth/register', formData);
       const { token, user } = response.data;
       
+      // Auto-login after registration
       login(token, user);
       navigate('/');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Invalid email or password.');
+      setError(err.response?.data?.message || 'Registration failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -43,8 +44,8 @@ const Login = () => {
   return (
     <div className="page-container flex-center">
       <div className="glass-card auth-card">
-        <h1>Welcome Back</h1>
-        <p>Log in to access your meetings</p>
+        <h1>Create Account</h1>
+        <p>Join Antigravity Meetings today</p>
 
         {error && (
           <div style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', padding: '0.75rem', borderRadius: '8px', marginBottom: '1.5rem', fontSize: '0.875rem' }}>
@@ -53,6 +54,17 @@ const Login = () => {
         )}
 
         <form className="auth-form" onSubmit={handleSubmit}>
+          <Input
+            label="Username"
+            name="username"
+            type="text"
+            placeholder="johndoe"
+            value={formData.username}
+            onChange={handleChange}
+            icon={<User size={20} />}
+            required
+          />
+          
           <Input
             label="Email Address"
             name="email"
@@ -73,19 +85,20 @@ const Login = () => {
             onChange={handleChange}
             icon={<Lock size={20} />}
             required
+            minLength={6}
           />
 
           <button type="submit" className="btn-primary flex-center" disabled={isLoading} style={{ gap: '0.5rem' }}>
-            {isLoading ? <Spinner size={20} /> : 'Log In'}
+            {isLoading ? <Spinner size={20} /> : 'Sign Up'}
           </button>
         </form>
 
         <div className="auth-footer">
-          Don't have an account? <Link to="/register">Sign up here</Link>
+          Already have an account? <Link to="/login">Log in here</Link>
         </div>
       </div>
     </div>
   );
 };
 
-export default Login;
+export default Register;
