@@ -1,9 +1,11 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { Hand } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { socket } from '../api/socket';
 import { MeetingControls } from '../components/MeetingControls';
+import { ChatPanel } from '../components/ChatPanel';
 import { Spinner } from '../components/Spinner';
 
 // ICE servers for WebRTC
@@ -20,13 +22,16 @@ const MeetingRoom = () => {
 
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStreams, setRemoteStreams] = useState<{ [id: string]: MediaStream }>({});
+  const [raisedHands, setRaisedHands] = useState<{ [id: string]: boolean }>({});
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isHandRaised, setIsHandRaised] = useState(false);
   const [error, setError] = useState('');
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const peersRef = useRef<{ [id: string]: RTCPeerConnection }>({});
-  const streamRef = useRef<MediaStream | null>(null); // To access latest stream in callbacks
+  const streamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
     if (!roomId || !user) return;
@@ -50,7 +55,7 @@ const MeetingRoom = () => {
 
     const connectToSocket = (stream: MediaStream) => {
       socket.connect();
-      socket.emit('join-room', roomId, user._id);
+      socket.emit('join-room', roomId, user.id);
 
       socket.on('user-connected', async (userId: string) => {
         console.log('User connected:', userId);
@@ -92,26 +97,40 @@ const MeetingRoom = () => {
             delete next[userId];
             return next;
           });
+
+          setRaisedHands((prev) => {
+            const next = { ...prev };
+            delete next[userId];
+            return next;
+          });
         }
+      });
+
+      // Hand Raise Listeners
+      socket.on('hand-raised', (userId: string) => {
+        setRaisedHands((prev) => ({ ...prev, [userId]: true }));
+      });
+
+      socket.on('hand-lowered', (userId: string) => {
+        setRaisedHands((prev) => ({ ...prev, [userId]: false }));
       });
     };
 
     initializeMedia();
 
     return () => {
-      // Cleanup
       socket.disconnect();
       socket.off('user-connected');
       socket.off('offer');
       socket.off('answer');
       socket.off('ice-candidate');
       socket.off('user-disconnected');
+      socket.off('hand-raised');
+      socket.off('hand-lowered');
 
-      // Close all peers
       Object.values(peersRef.current).forEach(peer => peer.close());
       peersRef.current = {};
 
-      // Stop all tracks
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
       }
@@ -168,6 +187,16 @@ const MeetingRoom = () => {
     }
   };
 
+  const toggleHand = () => {
+    const newState = !isHandRaised;
+    setIsHandRaised(newState);
+    if (newState) {
+      socket.emit('raise-hand', roomId, user?.id);
+    } else {
+      socket.emit('lower-hand', roomId, user?.id);
+    }
+  };
+
   const handleLeave = () => {
     navigate('/');
   };
@@ -195,7 +224,6 @@ const MeetingRoom = () => {
     );
   }
 
-  // Calculate dynamic grid styles based on participant count
   const totalParticipants = 1 + Object.keys(remoteStreams).length;
   const gridStyle = {
     gridTemplateColumns: totalParticipants === 1 
@@ -207,38 +235,60 @@ const MeetingRoom = () => {
 
   return (
     <div className="meeting-room">
-      <div className="video-grid" style={gridStyle}>
-        {/* Local Video */}
-        <div className="video-container">
-          <video ref={localVideoRef} autoPlay muted playsInline />
-          <div className="participant-label">You ({user?.username})</div>
+      <div className="meeting-layout">
+        <div className="video-section">
+          <div className="video-grid" style={gridStyle}>
+            {/* Local Video */}
+            <div className="video-container">
+              <video ref={localVideoRef} autoPlay muted playsInline />
+              <div className="participant-label">You ({user?.fullName})</div>
+              {isHandRaised && (
+                <div className="hand-indicator">
+                  <Hand size={20} />
+                </div>
+              )}
+            </div>
+
+            {/* Remote Videos */}
+            {Object.entries(remoteStreams).map(([peerId, stream]) => (
+              <div key={peerId} className="video-container">
+                <video 
+                  className="remote-video"
+                  autoPlay 
+                  playsInline 
+                  ref={(video) => {
+                    if (video && video.srcObject !== stream) {
+                      video.srcObject = stream;
+                    }
+                  }} 
+                />
+                <div className="participant-label">Participant</div>
+                {raisedHands[peerId] && (
+                  <div className="hand-indicator">
+                    <Hand size={20} />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <MeetingControls 
+            isMuted={isMuted} 
+            isVideoOff={isVideoOff} 
+            isChatOpen={isChatOpen}
+            isHandRaised={isHandRaised}
+            onToggleMute={toggleMute} 
+            onToggleVideo={toggleVideo} 
+            onToggleChat={() => setIsChatOpen(!isChatOpen)}
+            onToggleHand={toggleHand}
+            onLeave={handleLeave} 
+          />
         </div>
 
-        {/* Remote Videos */}
-        {Object.entries(remoteStreams).map(([peerId, stream]) => (
-          <div key={peerId} className="video-container">
-            <video 
-              className="remote-video"
-              autoPlay 
-              playsInline 
-              ref={(video) => {
-                if (video && video.srcObject !== stream) {
-                  video.srcObject = stream;
-                }
-              }} 
-            />
-            <div className="participant-label">Participant</div>
-          </div>
-        ))}
+        {isChatOpen && roomId && (
+          <ChatPanel roomId={roomId} onClose={() => setIsChatOpen(false)} />
+        )}
       </div>
-
-      <MeetingControls 
-        isMuted={isMuted} 
-        isVideoOff={isVideoOff} 
-        onToggleMute={toggleMute} 
-        onToggleVideo={toggleVideo} 
-        onLeave={handleLeave} 
-      />
     </div>
   );
 };

@@ -3,10 +3,10 @@ import type { ReactNode } from 'react';
 import api from '../api/axios';
 
 interface User {
-  _id: string;
-  username: string;
+  id: string;
+  fullName: string;
   email: string;
-  avatarUrl?: string;
+  avatar?: string;
 }
 
 interface AuthContextType {
@@ -32,12 +32,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
 
-      // We should ideally have a `/api/auth/me` endpoint in the backend to verify the token
-      // For now, if we don't, we can assume the token is valid if it's there and let the API interceptor catch 401s.
-      // Assuming we implemented GET /api/auth/me (or similar) in Day 2. Let's make a call to get user profile.
-      // Wait, we have GET /api/users/profile implemented in Day 2/3 (based on previous roadmap).
-      const response = await api.get('/users/profile');
-      setUser(response.data);
+      // Backend returns profile under { user: { ... } } at /api/auth/me
+      const response = await api.get('/auth/me');
+      setUser(response.data.user);
     } catch (error) {
       console.error('Authentication check failed', error);
       localStorage.removeItem('token');

@@ -39,7 +39,7 @@ const Dashboard = () => {
     // For an instant meeting, just create one starting now
     try {
       const response = await api.post('/meetings', {
-        title: `${user?.username}'s Instant Meeting`,
+        title: `${user?.fullName}'s Instant Meeting`,
         scheduledAt: new Date().toISOString()
       });
       navigate(`/meeting/${response.data._id}`);
@@ -52,11 +52,11 @@ const Dashboard = () => {
     <div className="page-container">
       <nav className="navbar">
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Video size={28} color="var(--primary-color)" />
+          <Video size={28} style={{ color: 'var(--primary-color)' }} />
           <h2 style={{ margin: 0 }}>Antigravity Meetings</h2>
         </div>
         <div className="user-controls">
-          <span style={{ fontWeight: 500 }}>Welcome, {user?.username}</span>
+          <span style={{ fontWeight: 500 }}>Welcome, {user?.fullName}</span>
           <button className="btn-secondary" onClick={logout}>Logout</button>
         </div>
       </nav>

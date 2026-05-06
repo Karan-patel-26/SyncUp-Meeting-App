@@ -8,7 +8,7 @@ import { Spinner } from '../components/Spinner';
 
 const Register = () => {
   const [formData, setFormData] = useState({
-    username: '',
+    fullName: '',
     email: '',
     password: '',
   });
@@ -28,11 +28,12 @@ const Register = () => {
     setError('');
 
     try {
-      const response = await api.post('/auth/register', formData);
-      const { token, user } = response.data;
-      
+      // Backend route is /auth/signup
+      const response = await api.post('/auth/signup', formData);
+      const { accessToken, user } = response.data;
+
       // Auto-login after registration
-      login(token, user);
+      login(accessToken, user);
       navigate('/');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Registration failed. Please try again.');
@@ -45,7 +46,7 @@ const Register = () => {
     <div className="page-container flex-center">
       <div className="glass-card auth-card">
         <h1>Create Account</h1>
-        <p>Join Antigravity Meetings today</p>
+        <p>Join Meetings today</p>
 
         {error && (
           <div style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', padding: '0.75rem', borderRadius: '8px', marginBottom: '1.5rem', fontSize: '0.875rem' }}>
@@ -55,16 +56,16 @@ const Register = () => {
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <Input
-            label="Username"
-            name="username"
+            label="Full Name"
+            name="fullName"
             type="text"
-            placeholder="johndoe"
-            value={formData.username}
+            placeholder="John Doe"
+            value={formData.fullName}
             onChange={handleChange}
             icon={<User size={20} />}
             required
           />
-          
+
           <Input
             label="Email Address"
             name="email"
