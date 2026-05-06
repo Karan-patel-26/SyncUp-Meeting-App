@@ -9,6 +9,7 @@ import { MeetingControls } from '../components/MeetingControls';
 import { ChatPanel } from '../components/ChatPanel';
 import { ParticipantsList } from '../components/ParticipantsList';
 import { AudioIndicator } from '../components/AudioIndicator';
+import { LiveCaptions } from '../components/LiveCaptions';
 import { Spinner } from '../components/Spinner';
 
 // ICE servers for WebRTC
@@ -34,6 +35,7 @@ const MeetingRoom = () => {
   const [remoteStreams, setRemoteStreams] = useState<{ [id: string]: MediaStream }>({});
   const [activeParticipants, setActiveParticipants] = useState<ParticipantInfo[]>([]);
   const [raisedHands, setRaisedHands] = useState<{ [id: string]: boolean }>({});
+  const [captions, setCaptions] = useState<{ [id: string]: string }>({});
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -41,6 +43,7 @@ const MeetingRoom = () => {
   const [isHandRaised, setIsHandRaised] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+  const [isCaptionsEnabled, setIsCaptionsEnabled] = useState(false);
   const [videoQuality, setVideoQuality] = useState<'360p' | '720p'>('720p');
   const [meetingHostId, setMeetingHostId] = useState<string | null>(null);
   const [error, setError] = useState('');
@@ -51,6 +54,7 @@ const MeetingRoom = () => {
   const participantsMapRef = useRef<{ [id: string]: string }>({});
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordedChunksRef = useRef<Blob[]>([]);
+  const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
     if (!roomId || !user) return;
@@ -85,9 +89,38 @@ const MeetingRoom = () => {
         }
 
         connectToSocket(stream);
+        initSpeechRecognition();
       } catch (err: any) {
         console.error('Error during room initialization:', err);
         setError(err.response?.data?.message || 'Could not initialize meeting room.');
+      }
+    };
+
+    const initSpeechRecognition = () => {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        const recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = 'en-US';
+
+        recognition.onresult = (event: any) => {
+          const transcript = Array.from(event.results)
+            .map((result: any) => result[0])
+            .map((result: any) => result.transcript)
+            .join('');
+          
+          if (transcript) {
+            socket.emit('transcription-chunk', roomId, user.id, transcript);
+            setCaptions(prev => ({ ...prev, [user.id]: transcript }));
+          }
+        };
+
+        recognition.onerror = (event: any) => {
+          console.error('Speech recognition error', event.error);
+        };
+
+        recognitionRef.current = recognition;
       }
     };
 
@@ -151,6 +184,10 @@ const MeetingRoom = () => {
         setRaisedHands((prev) => ({ ...prev, [userId]: false }));
       });
 
+      socket.on('transcription-chunk', (userId: string, text: string) => {
+        setCaptions(prev => ({ ...prev, [userId]: text }));
+      });
+
       socket.on('mute-remote-user', (targetUserId: string) => {
         if (targetUserId === user.id) {
           if (streamRef.current) {
@@ -182,6 +219,7 @@ const MeetingRoom = () => {
       socket.off('user-disconnected');
       socket.off('hand-raised');
       socket.off('hand-lowered');
+      socket.off('transcription-chunk');
       socket.off('mute-remote-user');
       socket.off('kick-remote-user');
 
@@ -191,6 +229,7 @@ const MeetingRoom = () => {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
       }
+      if (recognitionRef.current) recognitionRef.current.stop();
     };
   }, [roomId, user, navigate, meetingHostId]);
 
@@ -365,6 +404,16 @@ const MeetingRoom = () => {
     }
   };
 
+  const toggleCaptions = () => {
+    if (!isCaptionsEnabled) {
+      recognitionRef.current?.start();
+    } else {
+      recognitionRef.current?.stop();
+      setCaptions({});
+    }
+    setIsCaptionsEnabled(!isCaptionsEnabled);
+  };
+
   const handleLeave = () => {
     navigate('/');
   };
@@ -415,6 +464,7 @@ const MeetingRoom = () => {
               <AudioIndicator stream={isScreenSharing ? null : localStream} />
               {isHandRaised && <div className="hand-indicator"><Hand size={20} /></div>}
               {isScreenSharing && <div className="screen-share-indicator">You are sharing screen</div>}
+              {isCaptionsEnabled && <LiveCaptions text={captions[user?.id || '']} />}
               <button className="quality-badge" onClick={toggleQuality}>{videoQuality}</button>
             </div>
 
@@ -431,6 +481,7 @@ const MeetingRoom = () => {
                 <div className="participant-label">{participantsMapRef.current[peerId] || 'Participant'}</div>
                 <AudioIndicator stream={stream} />
                 {raisedHands[peerId] && <div className="hand-indicator"><Hand size={20} /></div>}
+                {isCaptionsEnabled && <LiveCaptions text={captions[peerId]} />}
               </div>
             ))}
           </div>
@@ -443,6 +494,7 @@ const MeetingRoom = () => {
             isHandRaised={isHandRaised}
             isScreenSharing={isScreenSharing}
             isRecording={isRecording}
+            isCaptionsEnabled={isCaptionsEnabled}
             onToggleMute={toggleMute} 
             onToggleVideo={toggleVideo} 
             onToggleChat={() => { setIsChatOpen(!isChatOpen); setIsParticipantsOpen(false); }}
@@ -450,6 +502,7 @@ const MeetingRoom = () => {
             onToggleHand={toggleHand}
             onToggleScreenShare={toggleScreenShare}
             onToggleRecording={toggleRecording}
+            onToggleCaptions={toggleCaptions}
             onLeave={handleLeave} 
           />
         </div>

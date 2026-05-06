@@ -1,4 +1,4 @@
-import { Mic, MicOff, Video, VideoOff, PhoneOff, MessageSquare, Hand, Users, Monitor, Circle } from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, PhoneOff, MessageSquare, Hand, Users, Monitor, Circle, ClosedCaption } from 'lucide-react';
 
 interface MeetingControlsProps {
   isMuted: boolean;
@@ -8,6 +8,7 @@ interface MeetingControlsProps {
   isHandRaised: boolean;
   isScreenSharing: boolean;
   isRecording: boolean;
+  isCaptionsEnabled: boolean;
   onToggleMute: () => void;
   onToggleVideo: () => void;
   onToggleChat: () => void;
@@ -15,6 +16,7 @@ interface MeetingControlsProps {
   onToggleHand: () => void;
   onToggleScreenShare: () => void;
   onToggleRecording: () => void;
+  onToggleCaptions: () => void;
   onLeave: () => void;
 }
 
@@ -26,6 +28,7 @@ export const MeetingControls = ({
   isHandRaised,
   isScreenSharing,
   isRecording,
+  isCaptionsEnabled,
   onToggleMute,
   onToggleVideo,
   onToggleChat,
@@ -33,6 +36,7 @@ export const MeetingControls = ({
   onToggleHand,
   onToggleScreenShare,
   onToggleRecording,
+  onToggleCaptions,
   onLeave,
 }: MeetingControlsProps) => {
   return (
@@ -68,6 +72,14 @@ export const MeetingControls = ({
         title={isScreenSharing ? 'Stop sharing' : 'Share screen'}
       >
         <Monitor size={24} />
+      </button>
+
+      <button 
+        className={`control-btn ${isCaptionsEnabled ? 'cc-active' : ''}`} 
+        onClick={onToggleCaptions}
+        title={isCaptionsEnabled ? 'Disable Captions' : 'Enable Captions'}
+      >
+        <ClosedCaption size={24} />
       </button>
 
       <button 
