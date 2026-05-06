@@ -1,4 +1,4 @@
-import { Mic, MicOff, Video, VideoOff, PhoneOff, MessageSquare, Hand, Users, Monitor } from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, PhoneOff, MessageSquare, Hand, Users, Monitor, Circle } from 'lucide-react';
 
 interface MeetingControlsProps {
   isMuted: boolean;
@@ -7,12 +7,14 @@ interface MeetingControlsProps {
   isParticipantsOpen: boolean;
   isHandRaised: boolean;
   isScreenSharing: boolean;
+  isRecording: boolean;
   onToggleMute: () => void;
   onToggleVideo: () => void;
   onToggleChat: () => void;
   onToggleParticipants: () => void;
   onToggleHand: () => void;
   onToggleScreenShare: () => void;
+  onToggleRecording: () => void;
   onLeave: () => void;
 }
 
@@ -23,12 +25,14 @@ export const MeetingControls = ({
   isParticipantsOpen,
   isHandRaised,
   isScreenSharing,
+  isRecording,
   onToggleMute,
   onToggleVideo,
   onToggleChat,
   onToggleParticipants,
   onToggleHand,
   onToggleScreenShare,
+  onToggleRecording,
   onLeave,
 }: MeetingControlsProps) => {
   return (
@@ -64,6 +68,15 @@ export const MeetingControls = ({
         title={isScreenSharing ? 'Stop sharing' : 'Share screen'}
       >
         <Monitor size={24} />
+      </button>
+
+      <button 
+        className={`control-btn ${isRecording ? 'active' : ''}`} 
+        onClick={onToggleRecording}
+        title={isRecording ? 'Stop recording' : 'Start recording'}
+        style={isRecording ? { color: '#ef4444' } : {}}
+      >
+        <Circle size={24} fill={isRecording ? '#ef4444' : 'transparent'} />
       </button>
 
       <button 

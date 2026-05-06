@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Video } from 'lucide-react';
+import { Plus, Video, Play, Calendar } from 'lucide-react';
 import api from '../api/axios';
 import { MeetingCard } from '../components/MeetingCard';
 import { CreateMeetingModal } from '../components/CreateMeetingModal';
@@ -11,32 +11,36 @@ const Dashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [meetings, setMeetings] = useState<any[]>([]);
+  const [recordings, setRecordings] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'meetings' | 'recordings'>('meetings');
 
   useEffect(() => {
-    fetchMeetings();
+    fetchData();
   }, []);
 
-  const fetchMeetings = async () => {
+  const fetchData = async () => {
+    setIsLoading(true);
     try {
-      const response = await api.get('/meetings');
-      setMeetings(response.data.meetings);
+      const [meetingsRes, recordingsRes] = await Promise.all([
+        api.get('/meetings'),
+        api.get('/meetings/recordings')
+      ]);
+      setMeetings(meetingsRes.data.meetings);
+      setRecordings(recordingsRes.data.recordings);
     } catch (error) {
-      console.error('Failed to fetch meetings', error);
+      console.error('Failed to fetch dashboard data', error);
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleMeetingCreated = (newMeeting: any) => {
-    // Determine if it should be added to the list (e.g. if we are showing all meetings)
-    // For now, let's prepend it to the state
     setMeetings((prev) => [newMeeting, ...prev]);
   };
 
   const handleQuickMeeting = async () => {
-    // For an instant meeting, just create one starting now
     try {
       const response = await api.post('/meetings', {
         title: `${user?.fullName}'s Instant Meeting`,
@@ -63,7 +67,7 @@ const Dashboard = () => {
       
       <main className="dashboard-content">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-          <h1 style={{ margin: 0 }}>Your Meetings</h1>
+          <h1 style={{ margin: 0 }}>Dashboard</h1>
           <div style={{ display: 'flex', gap: '1rem' }}>
             <button className="btn-secondary" onClick={handleQuickMeeting}>
               Start Instant
@@ -74,22 +78,65 @@ const Dashboard = () => {
           </div>
         </div>
 
+        <div className="tabs">
+          <div 
+            className={`tab ${activeTab === 'meetings' ? 'active' : ''}`} 
+            onClick={() => setActiveTab('meetings')}
+          >
+            Your Meetings
+          </div>
+          <div 
+            className={`tab ${activeTab === 'recordings' ? 'active' : ''}`} 
+            onClick={() => setActiveTab('recordings')}
+          >
+            Recordings
+          </div>
+        </div>
+
         {isLoading ? (
           <div className="flex-center" style={{ height: '300px' }}>
             <Spinner size={40} className="text-primary" />
           </div>
-        ) : meetings.length === 0 ? (
-          <div className="glass-card flex-center" style={{ flexDirection: 'column', height: '300px', gap: '1rem' }}>
-            <CalendarIcon size={48} color="var(--text-secondary)" />
-            <h3 style={{ margin: 0 }}>No meetings scheduled</h3>
-            <p style={{ color: 'var(--text-secondary)' }}>Get started by scheduling your first meeting.</p>
-          </div>
+        ) : activeTab === 'meetings' ? (
+          meetings.length === 0 ? (
+            <div className="glass-card flex-center" style={{ flexDirection: 'column', height: '300px', gap: '1rem' }}>
+              <Calendar size={48} color="var(--text-secondary)" />
+              <h3 style={{ margin: 0 }}>No meetings scheduled</h3>
+              <p style={{ color: 'var(--text-secondary)' }}>Get started by scheduling your first meeting.</p>
+            </div>
+          ) : (
+            <div className="action-cards">
+              {meetings.map((meeting) => (
+                <MeetingCard key={meeting._id} meeting={meeting} />
+              ))}
+            </div>
+          )
         ) : (
-          <div className="action-cards">
-            {meetings.map((meeting) => (
-              <MeetingCard key={meeting._id} meeting={meeting} />
-            ))}
-          </div>
+          recordings.length === 0 ? (
+            <div className="glass-card flex-center" style={{ flexDirection: 'column', height: '300px', gap: '1rem' }}>
+              <Video size={48} color="var(--text-secondary)" />
+              <h3 style={{ margin: 0 }}>No recordings found</h3>
+              <p style={{ color: 'var(--text-secondary)' }}>Recordings from your meetings will appear here.</p>
+            </div>
+          ) : (
+            <div className="recordings-grid">
+              {recordings.map((rec) => (
+                <div key={rec._id} className="recording-card">
+                  <div className="recording-thumb">
+                    <a href={rec.url} target="_blank" rel="noopener noreferrer" className="play-icon">
+                      <Play size={24} fill="white" />
+                    </a>
+                  </div>
+                  <div className="recording-info">
+                    <div className="recording-title">{rec.title}</div>
+                    <div className="recording-meta">
+                      {new Date(rec.createdAt).toLocaleDateString()} • {(rec.size / (1024 * 1024)).toFixed(1)} MB
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
         )}
       </main>
 
@@ -101,15 +148,5 @@ const Dashboard = () => {
     </div>
   );
 };
-
-// Helper component for empty state
-const CalendarIcon = ({ size, color }: { size: number, color: string }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-    <line x1="16" y1="2" x2="16" y2="6"></line>
-    <line x1="8" y1="2" x2="8" y2="6"></line>
-    <line x1="3" y1="10" x2="21" y2="10"></line>
-  </svg>
-);
 
 export default Dashboard;

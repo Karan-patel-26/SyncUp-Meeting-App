@@ -1,6 +1,9 @@
 import { Request, Response } from 'express';
 import { Meeting } from '../models/Meeting';
+import { Recording } from '../models/Recording';
 import { invalidateCache } from '../middlewares/cache.middleware';
+import cloudinary from '../config/cloudinary';
+import streamifier from 'streamifier';
 
 export const createMeeting = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -97,5 +100,75 @@ export const updateMeetingStatus = async (req: Request, res: Response): Promise<
     res.status(200).json({ message: 'Meeting status updated', meeting });
   } catch (error) {
     res.status(500).json({ message: 'Server error updating meeting' });
+  }
+};
+
+export const uploadRecording = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const userId = req.userId;
+
+    if (!req.file) {
+      res.status(400).json({ message: 'No video file provided' });
+      return;
+    }
+
+    const meeting = await Meeting.findById(id);
+    if (!meeting) {
+      res.status(404).json({ message: 'Meeting not found' });
+      return;
+    }
+
+    // Wrap the Cloudinary upload stream in a Promise
+    const uploadStream = () => {
+      return new Promise<any>((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          { 
+            folder: 'meeting_recordings',
+            resource_type: 'video' 
+          },
+          (error, result) => {
+            if (result) resolve(result);
+            else reject(error);
+          }
+        );
+        streamifier.createReadStream(req.file!.buffer).pipe(stream);
+      });
+    };
+
+    const result = await uploadStream();
+
+    const recording = new Recording({
+      meetingId: id,
+      title: `${meeting.title} - ${new Date().toLocaleString()}`,
+      url: result.secure_url,
+      duration: result.duration,
+      size: result.bytes,
+      recordedBy: userId
+    });
+
+    await recording.save();
+
+    res.status(201).json({ message: 'Recording uploaded successfully', recording });
+  } catch (error) {
+    console.error('Error uploading recording:', error);
+    res.status(500).json({ message: 'Server error during recording upload' });
+  }
+};
+
+export const getRecordings = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = req.userId;
+    // Find meetings where user is a participant and get recordings for those
+    const myMeetings = await Meeting.find({ participants: userId }).select('_id');
+    const meetingIds = myMeetings.map(m => m._id);
+
+    const recordings = await Recording.find({ meetingId: { $in: meetingIds } })
+      .populate('meetingId', 'title')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({ recordings });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error fetching recordings' });
   }
 };

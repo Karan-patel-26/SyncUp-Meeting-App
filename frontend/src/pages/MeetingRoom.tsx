@@ -40,6 +40,7 @@ const MeetingRoom = () => {
   const [isParticipantsOpen, setIsParticipantsOpen] = useState(false);
   const [isHandRaised, setIsHandRaised] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
   const [videoQuality, setVideoQuality] = useState<'360p' | '720p'>('720p');
   const [meetingHostId, setMeetingHostId] = useState<string | null>(null);
   const [error, setError] = useState('');
@@ -48,6 +49,8 @@ const MeetingRoom = () => {
   const peersRef = useRef<{ [id: string]: RTCPeerConnection }>({});
   const streamRef = useRef<MediaStream | null>(null);
   const participantsMapRef = useRef<{ [id: string]: string }>({});
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordedChunksRef = useRef<Blob[]>([]);
 
   useEffect(() => {
     if (!roomId || !user) return;
@@ -310,6 +313,58 @@ const MeetingRoom = () => {
     }
   };
 
+  const toggleRecording = async () => {
+    if (!isRecording) {
+      try {
+        const streamToRecord = screenStream || localStream;
+        if (!streamToRecord) return;
+
+        const options = { mimeType: 'video/webm;codecs=vp9,opus' };
+        if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+          options.mimeType = 'video/webm';
+        }
+
+        const recorder = new MediaRecorder(streamToRecord, options);
+        mediaRecorderRef.current = recorder;
+        recordedChunksRef.current = [];
+
+        recorder.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            recordedChunksRef.current.push(event.data);
+          }
+        };
+
+        recorder.onstop = async () => {
+          const blob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
+          await uploadRecordingFile(blob);
+        };
+
+        recorder.start();
+        setIsRecording(true);
+      } catch (err) {
+        console.error('Failed to start recording', err);
+      }
+    } else {
+      mediaRecorderRef.current?.stop();
+      setIsRecording(false);
+    }
+  };
+
+  const uploadRecordingFile = async (blob: Blob) => {
+    const formData = new FormData();
+    formData.append('recording', blob, `recording-${Date.now()}.webm`);
+
+    try {
+      await api.post(`/meetings/${roomId}/recordings`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      alert('Recording saved successfully!');
+    } catch (err) {
+      console.error('Failed to upload recording', err);
+      alert('Failed to save recording.');
+    }
+  };
+
   const handleLeave = () => {
     navigate('/');
   };
@@ -387,15 +442,24 @@ const MeetingRoom = () => {
             isParticipantsOpen={isParticipantsOpen}
             isHandRaised={isHandRaised}
             isScreenSharing={isScreenSharing}
+            isRecording={isRecording}
             onToggleMute={toggleMute} 
             onToggleVideo={toggleVideo} 
             onToggleChat={() => { setIsChatOpen(!isChatOpen); setIsParticipantsOpen(false); }}
             onToggleParticipants={() => { setIsParticipantsOpen(!isParticipantsOpen); setIsChatOpen(false); }}
             onToggleHand={toggleHand}
             onToggleScreenShare={toggleScreenShare}
+            onToggleRecording={toggleRecording}
             onLeave={handleLeave} 
           />
         </div>
+
+        {isRecording && (
+          <div className="recording-indicator">
+            <div className="recording-dot"></div>
+            REC
+          </div>
+        )}
 
         {isChatOpen && roomId && <ChatPanel roomId={roomId} onClose={() => setIsChatOpen(false)} />}
         {isParticipantsOpen && roomId && (
