@@ -52,7 +52,7 @@ mongoose
   .connect(MONGODB_URI)
   .then(async () => {
     console.log('Successfully connected to MongoDB');
-    // await connectRedis(); // Temporarily disabled if Redis is not running
+    await connectRedis(); 
     httpServer.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
     });

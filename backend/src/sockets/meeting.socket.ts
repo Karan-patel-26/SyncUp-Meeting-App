@@ -1,8 +1,10 @@
 import { Server, Socket } from 'socket.io';
-import { redisClient } from '../config/redis';
+import { redisClient, isRedisConnected } from '../config/redis';
 import { Message } from '../models/Message';
 
-const roomNotes: { [roomId: string]: string } = {};
+// Local fallbacks if Redis is down
+const localNotes: { [roomId: string]: string } = {};
+const localWhiteboard: { [roomId: string]: any[] } = {};
 
 export const setupMeetingSockets = (io: Server) => {
   io.on('connection', (socket: Socket) => {
@@ -11,19 +13,36 @@ export const setupMeetingSockets = (io: Server) => {
     socket.on('join-room', async (roomId: string, userId: string) => {
       socket.join(roomId);
       
-      // Store presence in Redis
-      await redisClient.hSet('presence', userId, socket.id);
+      // Store presence
+      if (isRedisConnected) {
+        await redisClient.hSet(`room:${roomId}:presence`, userId, socket.id);
+      }
       
       socket.to(roomId).emit('user-connected', userId);
 
       // Send current notes to the new user
-      if (roomNotes[roomId]) {
-        socket.emit('initial-notes', roomNotes[roomId]);
+      if (isRedisConnected) {
+        const notes = await redisClient.get(`room:${roomId}:notes`);
+        if (notes) socket.emit('initial-notes', notes);
+      } else if (localNotes[roomId]) {
+        socket.emit('initial-notes', localNotes[roomId]);
+      }
+
+      // Send whiteboard state
+      if (isRedisConnected) {
+        const boardData = await redisClient.lRange(`room:${roomId}:whiteboard`, 0, -1);
+        if (boardData && boardData.length > 0) {
+          boardData.forEach(item => socket.emit('draw-data', JSON.parse(item)));
+        }
+      } else if (localWhiteboard[roomId]) {
+        localWhiteboard[roomId].forEach(item => socket.emit('draw-data', item));
       }
 
       // Handle disconnection from the room
       socket.on('disconnect', async () => {
-        await redisClient.hDel('presence', userId);
+        if (isRedisConnected) {
+          await redisClient.hDel(`room:${roomId}:presence`, userId);
+        }
         socket.to(roomId).emit('user-disconnected', userId);
       });
     });
@@ -75,16 +94,34 @@ export const setupMeetingSockets = (io: Server) => {
       socket.to(roomId).emit('transcription-chunk', userId, text);
     });
 
-    socket.on('draw-data', (roomId: string, data: any) => {
+    socket.on('draw-data', async (roomId: string, data: any) => {
       socket.to(roomId).emit('draw-data', data);
+      
+      // Persist whiteboard stroke
+      if (isRedisConnected) {
+        await redisClient.rPush(`room:${roomId}:whiteboard`, JSON.stringify(data));
+        await redisClient.expire(`room:${roomId}:whiteboard`, 86400); // 24h expiry
+      } else {
+        if (!localWhiteboard[roomId]) localWhiteboard[roomId] = [];
+        localWhiteboard[roomId].push(data);
+      }
     });
 
-    socket.on('clear-whiteboard', (roomId: string) => {
+    socket.on('clear-whiteboard', async (roomId: string) => {
       socket.to(roomId).emit('clear-whiteboard');
+      if (isRedisConnected) {
+        await redisClient.del(`room:${roomId}:whiteboard`);
+      } else {
+        localWhiteboard[roomId] = [];
+      }
     });
 
-    socket.on('notes-update', (roomId: string, delta: any) => {
-      roomNotes[roomId] = delta; // In our simple relay, delta is the whole content
+    socket.on('notes-update', async (roomId: string, delta: any) => {
+      if (isRedisConnected) {
+        await redisClient.set(`room:${roomId}:notes`, delta, { EX: 86400 });
+      } else {
+        localNotes[roomId] = delta;
+      }
       socket.to(roomId).emit('notes-update', delta);
     });
 
