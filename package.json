@@ -6,7 +6,8 @@
     "test": "npx playwright test",
     "test:e2e": "npx playwright test",
     "test:e2e:ui": "npx playwright test --ui",
-    "test:perf": "npx artillery run load-test.yaml"
+    "test:perf": "npx artillery run load-test.yaml",
+    "start:prod": "docker-compose up --build"
   },
   "keywords": [],
   "author": "",

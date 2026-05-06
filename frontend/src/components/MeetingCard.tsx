@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
-import { Calendar, Users, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Calendar, Users, Sparkles, CheckCircle2, Link as LinkIcon, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface MeetingProps {
@@ -19,7 +19,15 @@ interface MeetingProps {
 export const MeetingCard = ({ meeting }: MeetingProps) => {
   const navigate = useNavigate();
   const [showSummary, setShowSummary] = useState(false);
+  const [copied, setCopied] = useState(false);
   const formattedDate = format(new Date(meeting.scheduledAt), 'MMM d, yyyy h:mm a');
+
+  const copyToClipboard = () => {
+    const url = `${window.location.origin}/meeting/${meeting._id}`;
+    navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   return (
     <div className="glass-card meeting-card">
@@ -49,6 +57,15 @@ export const MeetingCard = ({ meeting }: MeetingProps) => {
             </div>
             
             <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button 
+                className="btn-secondary" 
+                style={{ padding: '0.5rem', width: '36px' }}
+                onClick={copyToClipboard}
+                title="Copy meeting link"
+              >
+                {copied ? <Check size={16} color="#10b981" /> : <LinkIcon size={16} />}
+              </button>
+              
               {meeting.summary && (
                 <button 
                   className="btn-secondary" 
@@ -95,4 +112,3 @@ export const MeetingCard = ({ meeting }: MeetingProps) => {
     </div>
   );
 };
-

@@ -1217,10 +1217,36 @@ button {
   margin-bottom: 0.75rem;
 }
 
-.participant-item.waiting {
-  background: rgba(255, 255, 255, 0.03);
-  margin-bottom: 0.5rem;
-  border-radius: 8px;
+/* Final Polish Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.page-container, .meeting-room {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card:hover {
+  border-color: rgba(var(--primary-color-rgb), 0.3);
+  box-shadow: 0 12px 48px 0 rgba(var(--primary-color-rgb), 0.15);
+}
+
+.btn-primary {
+  transition: all 0.2s ease;
+}
+
+.btn-primary:active {
+  transform: scale(0.96);
 }
 
 .action-btn.admit:hover {
