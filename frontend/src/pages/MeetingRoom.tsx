@@ -4,8 +4,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Hand } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { socket } from '../api/socket';
+import api from '../api/axios';
 import { MeetingControls } from '../components/MeetingControls';
 import { ChatPanel } from '../components/ChatPanel';
+import { ParticipantsList } from '../components/ParticipantsList';
 import { Spinner } from '../components/Spinner';
 
 // ICE servers for WebRTC
@@ -15,6 +17,12 @@ const configuration = {
   ]
 };
 
+interface ParticipantInfo {
+  id: string;
+  fullName: string;
+  isHost: boolean;
+}
+
 const MeetingRoom = () => {
   const { id: roomId } = useParams<{ id: string }>();
   const { user } = useAuth();
@@ -22,22 +30,46 @@ const MeetingRoom = () => {
 
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStreams, setRemoteStreams] = useState<{ [id: string]: MediaStream }>({});
+  const [activeParticipants, setActiveParticipants] = useState<ParticipantInfo[]>([]);
   const [raisedHands, setRaisedHands] = useState<{ [id: string]: boolean }>({});
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isParticipantsOpen, setIsParticipantsOpen] = useState(false);
   const [isHandRaised, setIsHandRaised] = useState(false);
+  const [meetingHostId, setMeetingHostId] = useState<string | null>(null);
   const [error, setError] = useState('');
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const peersRef = useRef<{ [id: string]: RTCPeerConnection }>({});
   const streamRef = useRef<MediaStream | null>(null);
+  const participantsMapRef = useRef<{ [id: string]: string }>({}); // Mapping of id to fullName
 
   useEffect(() => {
     if (!roomId || !user) return;
 
-    const initializeMedia = async () => {
+    const initialize = async () => {
       try {
+        // 1. Fetch meeting details first to get names and host
+        const res = await api.get(`/meetings/${roomId}`);
+        const meeting = res.data.meeting;
+        setMeetingHostId(meeting.host._id || meeting.host);
+        
+        // Build participants map for name resolution
+        const pMap: { [id: string]: string } = {};
+        meeting.participants.forEach((p: any) => {
+          pMap[p._id] = p.fullName;
+        });
+        participantsMapRef.current = pMap;
+
+        // Add self to active participants
+        setActiveParticipants([{
+          id: user.id,
+          fullName: user.fullName,
+          isHost: (meeting.host._id || meeting.host) === user.id
+        }]);
+
+        // 2. Initialize Media
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         setLocalStream(stream);
         streamRef.current = stream;
@@ -48,8 +80,8 @@ const MeetingRoom = () => {
 
         connectToSocket(stream);
       } catch (err: any) {
-        console.error('Error accessing media devices.', err);
-        setError('Could not access camera/microphone. Please allow permissions.');
+        console.error('Error during room initialization:', err);
+        setError(err.response?.data?.message || 'Could not initialize meeting room.');
       }
     };
 
@@ -59,6 +91,14 @@ const MeetingRoom = () => {
 
       socket.on('user-connected', async (userId: string) => {
         console.log('User connected:', userId);
+        
+        // Add to active participants list
+        const name = participantsMapRef.current[userId] || 'Anonymous';
+        setActiveParticipants(prev => {
+          if (prev.find(p => p.id === userId)) return prev;
+          return [...prev, { id: userId, fullName: name, isHost: userId === meetingHostId }];
+        });
+
         const peer = createPeer(userId, stream);
         peersRef.current[userId] = peer;
       });
@@ -87,7 +127,6 @@ const MeetingRoom = () => {
       });
 
       socket.on('user-disconnected', (userId: string) => {
-        console.log('User disconnected:', userId);
         if (peersRef.current[userId]) {
           peersRef.current[userId].close();
           delete peersRef.current[userId];
@@ -103,10 +142,12 @@ const MeetingRoom = () => {
             delete next[userId];
             return next;
           });
+
+          setActiveParticipants(prev => prev.filter(p => p.id !== userId));
         }
       });
 
-      // Hand Raise Listeners
+      // Interactive Events
       socket.on('hand-raised', (userId: string) => {
         setRaisedHands((prev) => ({ ...prev, [userId]: true }));
       });
@@ -114,9 +155,30 @@ const MeetingRoom = () => {
       socket.on('hand-lowered', (userId: string) => {
         setRaisedHands((prev) => ({ ...prev, [userId]: false }));
       });
+
+      // Admin Actions
+      socket.on('mute-remote-user', (targetUserId: string) => {
+        if (targetUserId === user.id) {
+          // It's me! Hard mute.
+          if (streamRef.current) {
+            const audioTrack = streamRef.current.getAudioTracks()[0];
+            if (audioTrack && audioTrack.enabled) {
+              audioTrack.enabled = false;
+              setIsMuted(true);
+            }
+          }
+        }
+      });
+
+      socket.on('kick-remote-user', (targetUserId: string) => {
+        if (targetUserId === user.id) {
+          alert('You have been removed from the meeting by the host.');
+          navigate('/');
+        }
+      });
     };
 
-    initializeMedia();
+    initialize();
 
     return () => {
       socket.disconnect();
@@ -127,6 +189,8 @@ const MeetingRoom = () => {
       socket.off('user-disconnected');
       socket.off('hand-raised');
       socket.off('hand-lowered');
+      socket.off('mute-remote-user');
+      socket.off('kick-remote-user');
 
       Object.values(peersRef.current).forEach(peer => peer.close());
       peersRef.current = {};
@@ -135,7 +199,7 @@ const MeetingRoom = () => {
         streamRef.current.getTracks().forEach(track => track.stop());
       }
     };
-  }, [roomId, user]);
+  }, [roomId, user, navigate, meetingHostId]);
 
   const createPeer = (userId: string, stream: MediaStream, initiator: boolean = true) => {
     const peer = new RTCPeerConnection(configuration);
@@ -233,6 +297,8 @@ const MeetingRoom = () => {
         : 'repeat(auto-fit, minmax(300px, 1fr))'
   };
 
+  const isCurrentUserHost = meetingHostId === user?.id;
+
   return (
     <div className="meeting-room">
       <div className="meeting-layout">
@@ -262,7 +328,7 @@ const MeetingRoom = () => {
                     }
                   }} 
                 />
-                <div className="participant-label">Participant</div>
+                <div className="participant-label">{participantsMapRef.current[peerId] || 'Participant'}</div>
                 {raisedHands[peerId] && (
                   <div className="hand-indicator">
                     <Hand size={20} />
@@ -276,10 +342,18 @@ const MeetingRoom = () => {
             isMuted={isMuted} 
             isVideoOff={isVideoOff} 
             isChatOpen={isChatOpen}
+            isParticipantsOpen={isParticipantsOpen}
             isHandRaised={isHandRaised}
             onToggleMute={toggleMute} 
             onToggleVideo={toggleVideo} 
-            onToggleChat={() => setIsChatOpen(!isChatOpen)}
+            onToggleChat={() => {
+              setIsChatOpen(!isChatOpen);
+              setIsParticipantsOpen(false);
+            }}
+            onToggleParticipants={() => {
+              setIsParticipantsOpen(!isParticipantsOpen);
+              setIsChatOpen(false);
+            }}
             onToggleHand={toggleHand}
             onLeave={handleLeave} 
           />
@@ -287,6 +361,15 @@ const MeetingRoom = () => {
 
         {isChatOpen && roomId && (
           <ChatPanel roomId={roomId} onClose={() => setIsChatOpen(false)} />
+        )}
+
+        {isParticipantsOpen && roomId && (
+          <ParticipantsList 
+            roomId={roomId} 
+            participants={activeParticipants} 
+            isCurrentUserHost={isCurrentUserHost}
+            onClose={() => setIsParticipantsOpen(false)} 
+          />
         )}
       </div>
     </div>

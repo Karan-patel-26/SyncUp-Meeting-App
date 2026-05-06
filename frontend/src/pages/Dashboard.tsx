@@ -21,7 +21,7 @@ const Dashboard = () => {
   const fetchMeetings = async () => {
     try {
       const response = await api.get('/meetings');
-      setMeetings(response.data);
+      setMeetings(response.data.meetings);
     } catch (error) {
       console.error('Failed to fetch meetings', error);
     } finally {

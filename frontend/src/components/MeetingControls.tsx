@@ -1,13 +1,15 @@
-import { Mic, MicOff, Video, VideoOff, PhoneOff, MessageSquare, Hand } from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, PhoneOff, MessageSquare, Hand, Users } from 'lucide-react';
 
 interface MeetingControlsProps {
   isMuted: boolean;
   isVideoOff: boolean;
   isChatOpen: boolean;
+  isParticipantsOpen: boolean;
   isHandRaised: boolean;
   onToggleMute: () => void;
   onToggleVideo: () => void;
   onToggleChat: () => void;
+  onToggleParticipants: () => void;
   onToggleHand: () => void;
   onLeave: () => void;
 }
@@ -16,10 +18,12 @@ export const MeetingControls = ({
   isMuted,
   isVideoOff,
   isChatOpen,
+  isParticipantsOpen,
   isHandRaised,
   onToggleMute,
   onToggleVideo,
   onToggleChat,
+  onToggleParticipants,
   onToggleHand,
   onLeave,
 }: MeetingControlsProps) => {
@@ -48,6 +52,14 @@ export const MeetingControls = ({
         style={isHandRaised ? { backgroundColor: '#f59e0b' } : {}}
       >
         <Hand size={24} />
+      </button>
+
+      <button 
+        className={`control-btn ${isParticipantsOpen ? 'active' : ''}`} 
+        onClick={onToggleParticipants}
+        title="Participants"
+      >
+        <Users size={24} />
       </button>
 
       <button 

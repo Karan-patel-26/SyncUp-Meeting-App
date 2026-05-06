@@ -39,16 +39,14 @@ export const setupMeetingSockets = (io: Server) => {
     // Chat Message
     socket.on('send-message', async (roomId: string, senderId: string, text: string) => {
       try {
-        // Save to database
         const newMessage = await Message.create({
           meetingId: roomId,
           senderId,
           text
         });
         
-        // Broadcast to room including the sender (if needed) or let client handle sender msg
-        // Usually, the sender might optimistically render, but we can broadcast to everyone
-        io.to(roomId).emit('receive-message', newMessage);
+        // Use 'new-message' to align with frontend
+        io.to(roomId).emit('new-message', newMessage);
       } catch (error) {
         console.error('Error saving message via socket:', error);
       }
@@ -56,12 +54,26 @@ export const setupMeetingSockets = (io: Server) => {
 
     // Raise Hand
     socket.on('raise-hand', (roomId: string, userId: string) => {
-      socket.to(roomId).emit('user-raised-hand', userId);
+      // Use 'hand-raised' to align with frontend
+      socket.to(roomId).emit('hand-raised', userId);
     });
 
     // Lower Hand
     socket.on('lower-hand', (roomId: string, userId: string) => {
-      socket.to(roomId).emit('user-lowered-hand', userId);
+      // Use 'hand-lowered' to align with frontend
+      socket.to(roomId).emit('hand-lowered', userId);
+    });
+
+    // Admin Actions: Mute User
+    socket.on('mute-user', (roomId: string, targetUserId: string) => {
+      // Broadcast to the room so everyone knows they are muted, 
+      // and specific listener on target user will trigger their hardware mute
+      io.to(roomId).emit('mute-remote-user', targetUserId);
+    });
+
+    // Admin Actions: Kick User
+    socket.on('kick-user', (roomId: string, targetUserId: string) => {
+      io.to(roomId).emit('kick-remote-user', targetUserId);
     });
 
   });
