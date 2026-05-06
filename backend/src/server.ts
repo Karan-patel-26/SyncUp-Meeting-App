@@ -11,7 +11,9 @@ import userRoutes from './routes/user.routes';
 import meetingRoutes from './routes/meeting.routes';
 import messageRoutes from './routes/message.routes';
 import { setupMeetingSockets } from './sockets/meeting.socket';
-import { connectRedis } from './config/redis';
+import { connectRedis, isRedisConnected } from './config/redis';
+import rateLimit from 'express-rate-limit';
+import logger from './utils/logger';
 
 // Load environment variables
 dotenv.config();
@@ -20,16 +22,35 @@ const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    origin: '*', // To be configured properly in production
+    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
     methods: ['GET', 'POST']
   }
 });
 
+// Rate Limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again after 15 minutes',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // Middlewares
 app.use(helmet());
-app.use(cors({ origin: 'http://localhost:5173', credentials: true })); // Setup correct CORS for cookies
+app.use(cors({ 
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173', 
+  credentials: true 
+}));
+app.use(limiter);
 app.use(express.json());
 app.use(cookieParser());
+
+// Request Logging Middleware
+app.use((req, res, next) => {
+  logger.info(`${req.method} ${req.url}`);
+  next();
+});
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -38,7 +59,14 @@ app.use('/api/meetings', meetingRoutes);
 app.use('/api/messages', messageRoutes);
 
 app.get('/api/health', (req: Request, res: Response) => {
-  res.status(200).json({ status: 'OK', message: 'Backend is running' });
+  const dbStatus = mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected';
+  res.status(200).json({ 
+    status: 'OK', 
+    message: 'Backend is running',
+    environment: process.env.NODE_ENV || 'development',
+    database: dbStatus,
+    redis: isRedisConnected ? 'Connected' : 'Disconnected'
+  });
 });
 
 // Socket.io connection logic
@@ -51,13 +79,13 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/intern
 mongoose
   .connect(MONGODB_URI)
   .then(async () => {
-    console.log('Successfully connected to MongoDB');
+    logger.info('Successfully connected to MongoDB');
     await connectRedis(); 
     httpServer.listen(PORT, () => {
-      console.log(`Server is running on port ${PORT}`);
+      logger.info(`Server is running on port ${PORT}`);
     });
   })
   .catch((error) => {
-    console.error('Error connecting to MongoDB:', error);
+    logger.error('Error connecting to MongoDB:', error);
     process.exit(1);
   });
