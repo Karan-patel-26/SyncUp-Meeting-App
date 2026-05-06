@@ -1,0 +1,31 @@
+config:
+  target: "http://localhost:5000/api"
+  phases:
+    - duration: 60
+      arrivalRate: 5
+      name: Warm up
+    - duration: 120
+      arrivalRate: 10
+      rampTo: 50
+      name: Ramp up load
+  defaults:
+    headers:
+      Content-Type: "application/json"
+
+scenarios:
+  - name: "Public Health Check & Meeting Discovery"
+    flow:
+      - get:
+          url: "/health"
+      - post:
+          url: "/auth/login"
+          json:
+            email: "test@example.com"
+            password: "Password123!"
+          capture:
+            json: "$.token"
+            as: "token"
+      - get:
+          url: "/meetings"
+          headers:
+            Authorization: "Bearer {{ token }}"
