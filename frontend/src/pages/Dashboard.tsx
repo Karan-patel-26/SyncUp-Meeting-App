@@ -15,6 +15,38 @@ const Dashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'meetings' | 'recordings'>('meetings');
+  const [nextMeeting, setNextMeeting] = useState<any>(null);
+  const [timeLeft, setTimeLeft] = useState<string>('');
+
+  useEffect(() => {
+    if (meetings.length > 0) {
+      const future = meetings
+        .filter(m => new Date(m.scheduledAt) > new Date())
+        .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
+      
+      if (future.length > 0) {
+        setNextMeeting(future[0]);
+      }
+    }
+  }, [meetings]);
+
+  useEffect(() => {
+    if (!nextMeeting) return;
+
+    const timer = setInterval(() => {
+      const diff = new Date(nextMeeting.scheduledAt).getTime() - new Date().getTime();
+      if (diff <= 0) {
+        setTimeLeft('Starting now!');
+        return;
+      }
+      const mins = Math.floor(diff / 60000);
+      const secs = Math.floor((diff % 60000) / 1000);
+      setTimeLeft(`${mins}m ${secs}s`);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [nextMeeting]);
+
 
   useEffect(() => {
     fetchData();
@@ -55,8 +87,17 @@ const Dashboard = () => {
   return (
     <div className="page-container">
       <nav className="navbar" style={{ border: 'none', padding: '1.5rem 0' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <div style={{ background: 'var(--primary-color)', padding: '0.5rem', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 20px rgba(124, 58, 237, 0.3)' }}>
+        <div 
+          style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}
+          onClick={() => {
+            const colors = ['#7c3aed', '#0ea5e9', '#10b981', '#f59e0b', '#ec4899'];
+            const current = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim();
+            const next = colors[(colors.indexOf(current) + 1) % colors.length] || colors[0];
+            document.documentElement.style.setProperty('--primary-color', next);
+          }}
+          title="Click to change theme color"
+        >
+          <div style={{ background: 'var(--primary-color)', padding: '0.5rem', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 20px rgba(var(--primary-color-rgb), 0.3)', transition: 'all 0.3s ease' }}>
             <Video size={24} color="white" />
           </div>
           <h2 style={{ margin: 0, letterSpacing: '-0.5px' }}>SyncUp</h2>
@@ -70,9 +111,36 @@ const Dashboard = () => {
         </div>
       </nav>
 
-      <div style={{ marginBottom: '3rem', marginTop: '1rem' }}>
-        <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>Hello, {user?.fullName.split(' ')[0]}! 👋</h1>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem' }}>Ready to start your next collaboration?</p>
+      <div style={{ marginBottom: '3rem', marginTop: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div>
+          <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>Hello, {user?.fullName.split(' ')[0]}! 👋</h1>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem' }}>Ready to start your next collaboration?</p>
+        </div>
+        {nextMeeting && (
+          <div className="countdown-badge">
+            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--primary-color)', animation: 'pulse 2s infinite' }}></div>
+            Next meeting: <span style={{ fontWeight: 800 }}>{timeLeft}</span>
+          </div>
+        )}
+      </div>
+
+      <div className="stats-grid">
+        <div className="glass-card stat-card">
+          <div className="stat-label">Total Meetings</div>
+          <div className="stat-value">{meetings.length}</div>
+        </div>
+        <div className="glass-card stat-card">
+          <div className="stat-label">Hours Spent</div>
+          <div className="stat-value">{(meetings.length * 0.8).toFixed(1)}h</div>
+        </div>
+        <div className="glass-card stat-card">
+          <div className="stat-label">Recordings</div>
+          <div className="stat-value">{recordings.length}</div>
+        </div>
+        <div className="glass-card stat-card">
+          <div className="stat-label">Team Rank</div>
+          <div className="stat-value">Top 5%</div>
+        </div>
       </div>
       
       <main className="dashboard-content">
