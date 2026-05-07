@@ -5,7 +5,9 @@ import { Plus, Video, Play, Calendar } from 'lucide-react';
 import api from '../api/axios';
 import { MeetingCard } from '../components/MeetingCard';
 import { CreateMeetingModal } from '../components/CreateMeetingModal';
+import { SettingsModal } from '../components/SettingsModal';
 import { Spinner } from '../components/Spinner';
+import { Settings } from 'lucide-react';
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
@@ -14,6 +16,7 @@ const Dashboard = () => {
   const [recordings, setRecordings] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'meetings' | 'recordings'>('meetings');
   const [nextMeeting, setNextMeeting] = useState<any>(null);
   const [timeLeft, setTimeLeft] = useState<string>('');
@@ -107,6 +110,9 @@ const Dashboard = () => {
             <div style={{ fontSize: '0.8rem', opacity: 0.6 }}>Logged in as</div>
             <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{user?.fullName}</div>
           </div>
+          <button className="btn-secondary" style={{ padding: '0.5rem', display: 'flex', alignItems: 'center' }} onClick={() => setIsSettingsOpen(true)} title="Settings">
+            <Settings size={18} />
+          </button>
           <button className="btn-secondary" style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }} onClick={logout}>Logout</button>
         </div>
       </nav>
@@ -249,6 +255,10 @@ const Dashboard = () => {
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 
         onMeetingCreated={handleMeetingCreated} 
+      />
+      <SettingsModal 
+        isOpen={isSettingsOpen} 
+        onClose={() => setIsSettingsOpen(false)} 
       />
     </div>
   );
