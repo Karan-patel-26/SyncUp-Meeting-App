@@ -109,6 +109,77 @@ export const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
             </div>
           )}
 
+          {activeTab === 'notifications' && (
+            <div style={{ animation: 'fadeIn 0.3s ease' }}>
+              <h3 style={{ marginBottom: '1.5rem' }}>Notifications</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                {[
+                  { label: 'Email Notifications', desc: 'Receive updates about scheduled meetings', checked: true },
+                  { label: 'Chat Sounds', desc: 'Play a sound when a new message arrives', checked: true },
+                  { label: 'Hand Raise Alerts', desc: 'Notify when someone raises their hand', checked: true },
+                  { label: 'Browser Notifications', desc: 'Show alerts even when the app is in the background', checked: false },
+                ].map((item, idx) => (
+                  <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{item.label}</div>
+                      <div style={{ fontSize: '0.8rem', opacity: 0.6 }}>{item.desc}</div>
+                    </div>
+                    <div style={{ 
+                      width: '44px', 
+                      height: '24px', 
+                      background: item.checked ? 'var(--primary-color)' : 'rgba(255,255,255,0.1)', 
+                      borderRadius: '12px',
+                      position: 'relative',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s ease'
+                    }}>
+                      <div style={{ 
+                        width: '18px', 
+                        height: '18px', 
+                        background: 'white', 
+                        borderRadius: '50%', 
+                        position: 'absolute', 
+                        top: '3px', 
+                        left: item.checked ? '23px' : '3px',
+                        transition: 'all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55)'
+                      }}></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'privacy' && (
+            <div style={{ animation: 'fadeIn 0.3s ease' }}>
+              <h3 style={{ marginBottom: '1.5rem' }}>Privacy & Security</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid var(--glass-border)' }}>
+                  <div style={{ fontWeight: 600, marginBottom: '0.5rem' }}>Default Meeting Security</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.9rem' }}>
+                      <input type="checkbox" defaultChecked style={{ accentColor: 'var(--primary-color)' }} /> 
+                      Enable Waiting Room for all new meetings
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.9rem' }}>
+                      <input type="checkbox" style={{ accentColor: 'var(--primary-color)' }} /> 
+                      Require password for all new meetings
+                    </label>
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.5rem', opacity: 0.7 }}>Who can see my profile?</label>
+                  <select className="form-input" style={{ background: 'rgba(0,0,0,0.2)' }}>
+                    <option>Everyone</option>
+                    <option>Only people I've met with</option>
+                    <option>Nobody (Private)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
+
           {activeTab === 'appearance' && (
             <div style={{ animation: 'fadeIn 0.3s ease' }}>
               <h3 style={{ marginBottom: '1.5rem' }}>Appearance</h3>
