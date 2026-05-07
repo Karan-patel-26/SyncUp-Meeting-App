@@ -129,41 +129,53 @@ export const MeetingControls = ({
           bottom: '120%',
           right: '50%',
           transform: 'translateX(50%)',
-          display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
-          gap: '1rem',
-          padding: '1.5rem',
-          minWidth: '280px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.25rem',
+          padding: '0.75rem',
+          minWidth: '220px',
           zIndex: 100,
+          background: 'rgba(15, 17, 21, 0.95)', /* More solid for visibility */
+          backdropFilter: 'blur(10px)',
+          border: '1px solid var(--glass-border)',
+          borderRadius: '16px',
+          boxShadow: '0 20px 40px rgba(0,0,0,0.6)',
           animation: 'slideUp 0.2s ease-out forwards'
         }}>
-          <button className={`control-btn ${isHandRaised ? 'active' : ''}`} onClick={() => { onToggleHand(); setIsMoreOpen(false); }} title="Raise Hand">
-            <Hand size={20} />
-          </button>
-          <button className={`control-btn ${isParticipantsOpen ? 'active' : ''}`} onClick={() => { onToggleParticipants(); setIsMoreOpen(false); }} title="Participants">
-            <Users size={20} />
-          </button>
-          <button className={`control-btn ${isInsightsOpen ? 'active' : ''}`} onClick={() => { onToggleInsights(); setIsMoreOpen(false); }} title="AI Insights">
-            <Brain size={20} />
-          </button>
-          <button className={`control-btn ${isWhiteboardOpen ? 'active' : ''}`} onClick={() => { onToggleWhiteboard(); setIsMoreOpen(false); }} title="Whiteboard">
-            <Palette size={20} />
-          </button>
-          <button className={`control-btn ${isNotesOpen ? 'active' : ''}`} onClick={() => { onToggleNotes(); setIsMoreOpen(false); }} title="Notes">
-            <FileText size={20} />
-          </button>
-          <button className={`control-btn ${isEffectsOpen ? 'active' : ''}`} onClick={() => { onToggleEffects(); setIsMoreOpen(false); }} title="Video Effects">
-            <Wand2 size={20} />
-          </button>
-          <button className={`control-btn ${isCaptionsEnabled ? 'active' : ''}`} onClick={() => { onToggleCaptions(); setIsMoreOpen(false); }} title="Captions">
-            <ClosedCaption size={20} />
-          </button>
-          <button className={`control-btn ${isRecording ? 'active' : ''}`} onClick={() => { onToggleRecording(); setIsMoreOpen(false); }} title="Record">
-            <Circle size={20} fill={isRecording ? '#ef4444' : 'transparent'} />
-          </button>
-          <button className="control-btn" onClick={() => { onSnap(); setIsMoreOpen(false); }} title="Snap">
-            <Camera size={20} />
-          </button>
+          {[
+            { icon: <Hand size={18} />, label: 'Raise Hand', active: isHandRaised, onClick: onToggleHand },
+            { icon: <Users size={18} />, label: 'Participants', active: isParticipantsOpen, onClick: onToggleParticipants },
+            { icon: <Brain size={18} />, label: 'AI Insights', active: isInsightsOpen, onClick: onToggleInsights },
+            { icon: <Palette size={18} />, label: 'Whiteboard', active: isWhiteboardOpen, onClick: onToggleWhiteboard },
+            { icon: <FileText size={18} />, label: 'Shared Notes', active: isNotesOpen, onClick: onToggleNotes },
+            { icon: <Wand2 size={18} />, label: 'Video Effects', active: isEffectsOpen, onClick: onToggleEffects },
+            { icon: <ClosedCaption size={18} />, label: 'Captions', active: isCaptionsEnabled, onClick: onToggleCaptions },
+            { icon: <Circle size={18} fill={isRecording ? '#ef4444' : 'transparent'} />, label: isRecording ? 'Stop Recording' : 'Record', active: isRecording, onClick: onToggleRecording },
+            { icon: <Camera size={18} />, label: 'Snap Screenshot', active: false, onClick: onSnap },
+          ].map((item, idx) => (
+            <button 
+              key={idx}
+              className={`menu-item ${item.active ? 'active' : ''}`}
+              onClick={() => { item.onClick(); setIsMoreOpen(false); }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem',
+                padding: '0.75rem 1rem',
+                width: '100%',
+                background: item.active ? 'rgba(124, 58, 237, 0.2)' : 'transparent',
+                border: 'none',
+                borderRadius: '10px',
+                color: item.active ? 'var(--primary-color)' : 'var(--text-primary)',
+                cursor: 'pointer',
+                textAlign: 'left',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              {item.icon}
+              <span style={{ fontSize: '0.9rem', fontWeight: 500 }}>{item.label}</span>
+            </button>
+          ))}
         </div>
       )}
     </div>
