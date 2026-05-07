@@ -1,8 +1,8 @@
-# 🌌 Antigravity - Enterprise AI Video Conferencing
+# 🌌 SyncUp - Enterprise AI Video Conferencing
 
-Antigravity is a premium, real-time video conferencing platform built with the MERN stack, featuring AI-driven intelligence, distributed state persistence, and enterprise-grade security.
+SyncUp is a premium, real-time video conferencing platform built with the MERN stack, featuring AI-driven intelligence, distributed state persistence, and enterprise-grade security.
 
-![Antigravity Demo](https://raw.githubusercontent.com/lucide-react/lucide/main/icons/video.svg)
+![SyncUp Demo](https://raw.githubusercontent.com/lucide-react/lucide/main/icons/video.svg)
 
 ## 🚀 Core Features
 

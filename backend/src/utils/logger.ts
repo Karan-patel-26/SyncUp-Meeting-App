@@ -11,7 +11,7 @@ const logFormat = winston.format.combine(
 const logger = winston.createLogger({
   level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
   format: logFormat,
-  defaultMeta: { service: 'antigravity-backend' },
+  defaultMeta: { service: 'syncup-backend' },
   transports: [
     // Write all logs with level 'error' and below to 'error.log'
     new winston.transports.File({ 
