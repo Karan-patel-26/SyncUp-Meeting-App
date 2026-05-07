@@ -7,6 +7,18 @@ interface User {
   fullName: string;
   email: string;
   avatar?: string;
+  preferences?: {
+    notifications: {
+      email: boolean;
+      chatSounds: boolean;
+      handRaise: boolean;
+    };
+    privacy: {
+      defaultWaitingRoom: boolean;
+      defaultPassword: boolean;
+      profileVisibility: string;
+    };
+  };
 }
 
 interface AuthContextType {
@@ -15,8 +27,10 @@ interface AuthContextType {
   isLoading: boolean;
   login: (token: string, user: User) => void;
   logout: () => void;
+  updateUser: (userData: User) => void;
   checkAuth: () => Promise<void>;
 }
+
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -59,11 +73,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Let the component or router handle redirection
   };
 
+  const updateUser = (userData: User) => {
+    setUser(userData);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, isLoading, login, logout, checkAuth }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, isLoading, login, logout, updateUser, checkAuth }}>
       {children}
     </AuthContext.Provider>
   );
+
 };
 
 export const useAuth = () => {

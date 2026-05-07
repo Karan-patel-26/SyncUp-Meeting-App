@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, User, Bell, Shield, Palette, Volume2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import api from '../api/axios';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -8,10 +9,63 @@ interface SettingsModalProps {
 }
 
 export const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const [activeTab, setActiveTab] = useState('profile');
+  const [loading, setLoading] = useState(false);
+  
+  // Settings State
+  const [fullName, setFullName] = useState(user?.fullName || '');
+  const [prefs, setPrefs] = useState({
+    notifications: {
+      email: user?.preferences?.notifications?.email ?? true,
+      chatSounds: user?.preferences?.notifications?.chatSounds ?? true,
+      handRaise: user?.preferences?.notifications?.handRaise ?? true,
+    },
+    privacy: {
+      defaultWaitingRoom: user?.preferences?.privacy?.defaultWaitingRoom ?? true,
+      defaultPassword: user?.preferences?.privacy?.defaultPassword ?? false,
+      profileVisibility: user?.preferences?.privacy?.profileVisibility ?? 'Everyone',
+    }
+  });
+
+  useEffect(() => {
+    if (user) {
+      setFullName(user.fullName);
+      if (user.preferences) {
+        setPrefs(user.preferences);
+      }
+    }
+  }, [user, isOpen]);
+
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+      const response = await api.patch('/auth/settings', {
+        fullName,
+        preferences: prefs
+      });
+      updateUser(response.data.user);
+      onClose();
+    } catch (error) {
+      console.error('Failed to save settings', error);
+      alert('Failed to save settings. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleNotif = (key: keyof typeof prefs.notifications) => {
+    setPrefs(prev => ({
+      ...prev,
+      notifications: {
+        ...prev.notifications,
+        [key]: !prev.notifications[key]
+      }
+    }));
+  };
 
   if (!isOpen) return null;
+
 
   const tabs = [
     { id: 'profile', label: 'Profile', icon: <User size={18} /> },
@@ -77,11 +131,16 @@ export const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.5rem', opacity: 0.7 }}>Full Name</label>
-                  <input type="text" className="form-input" defaultValue={user?.fullName} />
+                  <input 
+                    type="text" 
+                    className="form-input" 
+                    value={fullName} 
+                    onChange={(e) => setFullName(e.target.value)} 
+                  />
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.5rem', opacity: 0.7 }}>Email Address</label>
-                  <input type="email" className="form-input" defaultValue={user?.email} disabled />
+                  <input type="email" className="form-input" value={user?.email} disabled />
                 </div>
               </div>
             </div>
@@ -114,25 +173,28 @@ export const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
               <h3 style={{ marginBottom: '1.5rem' }}>Notifications</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                 {[
-                  { label: 'Email Notifications', desc: 'Receive updates about scheduled meetings', checked: true },
-                  { label: 'Chat Sounds', desc: 'Play a sound when a new message arrives', checked: true },
-                  { label: 'Hand Raise Alerts', desc: 'Notify when someone raises their hand', checked: true },
-                  { label: 'Browser Notifications', desc: 'Show alerts even when the app is in the background', checked: false },
+                  { id: 'email', label: 'Email Notifications', desc: 'Receive updates about scheduled meetings', checked: prefs.notifications.email },
+                  { id: 'chatSounds', label: 'Chat Sounds', desc: 'Play a sound when a new message arrives', checked: prefs.notifications.chatSounds },
+                  { id: 'handRaise', label: 'Hand Raise Alerts', desc: 'Notify when someone raises their hand', checked: prefs.notifications.handRaise },
+                  { id: 'browser', label: 'Browser Notifications', desc: 'Show alerts even when the app is in the background', checked: false },
                 ].map((item, idx) => (
                   <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
                       <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{item.label}</div>
                       <div style={{ fontSize: '0.8rem', opacity: 0.6 }}>{item.desc}</div>
                     </div>
-                    <div style={{ 
-                      width: '44px', 
-                      height: '24px', 
-                      background: item.checked ? 'var(--primary-color)' : 'rgba(255,255,255,0.1)', 
-                      borderRadius: '12px',
-                      position: 'relative',
-                      cursor: 'pointer',
-                      transition: 'all 0.3s ease'
-                    }}>
+                    <div 
+                      onClick={() => item.id !== 'browser' && toggleNotif(item.id as any)}
+                      style={{ 
+                        width: '44px', 
+                        height: '24px', 
+                        background: item.checked ? 'var(--primary-color)' : 'rgba(255,255,255,0.1)', 
+                        borderRadius: '12px',
+                        position: 'relative',
+                        cursor: 'pointer',
+                        transition: 'all 0.3s ease'
+                      }}
+                    >
                       <div style={{ 
                         width: '18px', 
                         height: '18px', 
@@ -158,11 +220,21 @@ export const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
                   <div style={{ fontWeight: 600, marginBottom: '0.5rem' }}>Default Meeting Security</div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.9rem' }}>
-                      <input type="checkbox" defaultChecked style={{ accentColor: 'var(--primary-color)' }} /> 
+                      <input 
+                        type="checkbox" 
+                        checked={prefs.privacy.defaultWaitingRoom} 
+                        onChange={() => setPrefs(p => ({ ...p, privacy: { ...p.privacy, defaultWaitingRoom: !p.privacy.defaultWaitingRoom } }))}
+                        style={{ accentColor: 'var(--primary-color)' }} 
+                      /> 
                       Enable Waiting Room for all new meetings
                     </label>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.9rem' }}>
-                      <input type="checkbox" style={{ accentColor: 'var(--primary-color)' }} /> 
+                      <input 
+                        type="checkbox" 
+                        checked={prefs.privacy.defaultPassword} 
+                        onChange={() => setPrefs(p => ({ ...p, privacy: { ...p.privacy, defaultPassword: !p.privacy.defaultPassword } }))}
+                        style={{ accentColor: 'var(--primary-color)' }} 
+                      /> 
                       Require password for all new meetings
                     </label>
                   </div>
@@ -170,7 +242,12 @@ export const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
 
                 <div>
                   <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.5rem', opacity: 0.7 }}>Who can see my profile?</label>
-                  <select className="form-input" style={{ background: 'rgba(0,0,0,0.2)' }}>
+                  <select 
+                    className="form-input" 
+                    style={{ background: 'rgba(0,0,0,0.2)' }}
+                    value={prefs.privacy.profileVisibility}
+                    onChange={(e) => setPrefs(p => ({ ...p, privacy: { ...p.privacy, profileVisibility: e.target.value } }))}
+                  >
                     <option>Everyone</option>
                     <option>Only people I've met with</option>
                     <option>Nobody (Private)</option>
@@ -200,8 +277,10 @@ export const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
           )}
 
           <div style={{ position: 'absolute', bottom: '2rem', right: '2rem', display: 'flex', gap: '1rem' }}>
-            <button className="btn-secondary" onClick={onClose}>Cancel</button>
-            <button className="btn-primary" onClick={onClose}>Save Changes</button>
+            <button className="btn-secondary" onClick={onClose} disabled={loading}>Cancel</button>
+            <button className="btn-primary" onClick={handleSave} disabled={loading}>
+              {loading ? 'Saving...' : 'Save Changes'}
+            </button>
           </div>
 
         </div>

@@ -229,3 +229,34 @@ export const loginWithOTP = async (req: Request, res: Response): Promise<void> =
     res.status(500).json({ message: 'Server error during OTP login' });
   }
 };
+export const updateSettings = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { fullName, avatar, preferences } = req.body;
+    const user = await User.findById(req.userId);
+    
+    if (!user) {
+      res.status(404).json({ message: 'User not found' });
+      return;
+    }
+
+    if (fullName) user.fullName = fullName;
+    if (avatar) user.avatar = avatar;
+    if (preferences) user.preferences = preferences;
+
+    await user.save();
+
+    res.status(200).json({ 
+      message: 'Settings updated successfully', 
+      user: { 
+        id: user.id, 
+        fullName: user.fullName, 
+        email: user.email, 
+        avatar: user.avatar,
+        preferences: user.preferences
+      } 
+    });
+  } catch (error) {
+    console.error('Update settings error:', error);
+    res.status(500).json({ message: 'Server error updating settings' });
+  }
+};

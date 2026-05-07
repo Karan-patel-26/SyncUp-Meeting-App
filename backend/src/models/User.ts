@@ -9,6 +9,18 @@ export interface IUser extends Document {
   otp?: string;
   otpExpiry?: Date;
   isVerified: boolean;
+  preferences: {
+    notifications: {
+      email: boolean;
+      chatSounds: boolean;
+      handRaise: boolean;
+    };
+    privacy: {
+      defaultWaitingRoom: boolean;
+      defaultPassword: boolean;
+      profileVisibility: string;
+    };
+  };
   comparePassword(candidatePassword: string): Promise<boolean>;
 }
 
@@ -47,6 +59,18 @@ const userSchema = new Schema<IUser>(
     isVerified: {
       type: Boolean,
       default: true,
+    },
+    preferences: {
+      notifications: {
+        email: { type: Boolean, default: true },
+        chatSounds: { type: Boolean, default: true },
+        handRaise: { type: Boolean, default: true },
+      },
+      privacy: {
+        defaultWaitingRoom: { type: Boolean, default: true },
+        defaultPassword: { type: Boolean, default: false },
+        profileVisibility: { type: String, default: 'Everyone' },
+      },
     },
   },
   {
