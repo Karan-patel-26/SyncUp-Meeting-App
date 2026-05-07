@@ -270,3 +270,18 @@ export const verifyMeetingAccess = async (req: Request, res: Response): Promise<
     res.status(500).json({ message: 'Server error verifying access' });
   }
 };
+export const analyzeMood = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { content } = req.body;
+    if (!content) {
+      res.status(400).json({ message: 'Content is required' });
+      return;
+    }
+
+    const analysis = await import('../services/ai.service').then(m => m.analyzeMeetingMood(content));
+    res.status(200).json(analysis);
+  } catch (error) {
+    console.error('Error analyzing mood:', error);
+    res.status(500).json({ message: 'Server error during mood analysis' });
+  }
+};

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createMeeting, getMyMeetings, getMeetingById, endMeeting, updateMeetingStatus, uploadRecording, getRecordings, summarizeMeeting, verifyMeetingAccess } from '../controllers/meeting.controller';
+import { createMeeting, getMyMeetings, getMeetingById, endMeeting, updateMeetingStatus, uploadRecording, getRecordings, summarizeMeeting, verifyMeetingAccess, analyzeMood } from '../controllers/meeting.controller';
 import { requireAuth } from '../middlewares/auth.middleware';
 import { cacheResponse } from '../middlewares/cache.middleware';
 import { videoUpload } from '../middlewares/upload.middleware';
@@ -17,5 +17,6 @@ router.patch('/:id/status', updateMeetingStatus);
 router.post('/:id/recordings', videoUpload.single('recording'), uploadRecording);
 router.post('/:id/summarize', summarizeMeeting);
 router.post('/:id/verify-access', verifyMeetingAccess);
+router.post('/:id/analyze-mood', analyzeMood);
 
 export default router;

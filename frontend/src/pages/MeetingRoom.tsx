@@ -14,6 +14,7 @@ import { SharedNotes } from '../components/SharedNotes';
 import { VideoEffectsMenu } from '../components/VideoEffectsMenu';
 import { videoEffectService } from '../services/videoEffect.service';
 import type { EffectType } from '../services/videoEffect.service';
+import { SmartInsights } from '../components/SmartInsights';
 import { Spinner } from '../components/Spinner';
 import { Input } from '../components/Input';
 
@@ -46,10 +47,12 @@ const MeetingRoom = () => {
   
   const [raisedHands, setRaisedHands] = useState<{ [id: string]: boolean }>({});
   const [captions, setCaptions] = useState<{ [id: string]: string }>({});
+  const [messages, setMessages] = useState<any[]>([]);
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isParticipantsOpen, setIsParticipantsOpen] = useState(false);
+  const [isInsightsOpen, setIsInsightsOpen] = useState(false);
   const [isHandRaised, setIsHandRaised] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
@@ -83,6 +86,24 @@ const MeetingRoom = () => {
     }
     setLocalStream(null);
     setScreenStream(null);
+  };
+
+  const handleSnap = () => {
+    if (localVideoRef.current) {
+      const canvas = document.createElement('canvas');
+      canvas.width = localVideoRef.current.videoWidth;
+      canvas.height = localVideoRef.current.videoHeight;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.translate(canvas.width, 0);
+        ctx.scale(-1, 1); // Mirror it back for the screenshot
+        ctx.drawImage(localVideoRef.current, 0, 0);
+        const link = document.createElement('a');
+        link.download = `syncup-snap-${Date.now()}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      }
+    }
   };
 
   const exitMeeting = () => {
@@ -580,23 +601,26 @@ const MeetingRoom = () => {
             </div>
 
             <MeetingControls 
-              isMuted={isMuted} isVideoOff={isVideoOff} isChatOpen={isChatOpen} isParticipantsOpen={isParticipantsOpen}
+              isMuted={isMuted} isVideoOff={isVideoOff} isChatOpen={isChatOpen} isParticipantsOpen={isParticipantsOpen} isInsightsOpen={isInsightsOpen}
               isHandRaised={isHandRaised} isScreenSharing={isScreenSharing} isRecording={isRecording} isCaptionsEnabled={isCaptionsEnabled}
               isWhiteboardOpen={isWhiteboardOpen} isNotesOpen={isNotesOpen} isEffectsOpen={isEffectsOpen}
               onToggleMute={toggleMute} onToggleVideo={toggleVideo} 
-              onToggleChat={() => { setIsChatOpen(!isChatOpen); setIsParticipantsOpen(false); setIsNotesOpen(false); setIsEffectsOpen(false); }}
-              onToggleParticipants={() => { setIsParticipantsOpen(!isParticipantsOpen); setIsChatOpen(false); setIsNotesOpen(false); setIsEffectsOpen(false); }}
+              onToggleChat={() => { setIsChatOpen(!isChatOpen); setIsParticipantsOpen(false); setIsNotesOpen(false); setIsEffectsOpen(false); setIsInsightsOpen(false); }}
+              onToggleParticipants={() => { setIsParticipantsOpen(!isParticipantsOpen); setIsChatOpen(false); setIsNotesOpen(false); setIsEffectsOpen(false); setIsInsightsOpen(false); }}
+              onToggleInsights={() => { setIsInsightsOpen(!isInsightsOpen); setIsChatOpen(false); setIsParticipantsOpen(false); setIsNotesOpen(false); setIsEffectsOpen(false); }}
               onToggleHand={toggleHand} onToggleScreenShare={toggleScreenShare} onToggleRecording={toggleRecording}
               onToggleCaptions={toggleCaptions} onToggleWhiteboard={() => setIsWhiteboardOpen(!isWhiteboardOpen)}
-              onToggleNotes={() => { setIsNotesOpen(!isNotesOpen); setIsChatOpen(false); setIsParticipantsOpen(false); setIsEffectsOpen(false); }}
-              onToggleEffects={() => { setIsEffectsOpen(!isEffectsOpen); setIsChatOpen(false); setIsParticipantsOpen(false); setIsNotesOpen(false); }}
+              onToggleNotes={() => { setIsNotesOpen(!isNotesOpen); setIsChatOpen(false); setIsParticipantsOpen(false); setIsEffectsOpen(false); setIsInsightsOpen(false); }}
+              onToggleEffects={() => { setIsEffectsOpen(!isEffectsOpen); setIsChatOpen(false); setIsParticipantsOpen(false); setIsNotesOpen(false); setIsInsightsOpen(false); }}
+              onSnap={handleSnap}
               onLeave={handleLeave} 
             />
           </div>
         )}
 
         {isEffectsOpen && <VideoEffectsMenu activeEffect={activeEffect} onSelectEffect={handleEffectChange} onClose={() => setIsEffectsOpen(false)} />}
-        {isChatOpen && roomId && <ChatPanel roomId={roomId} onClose={() => setIsChatOpen(false)} />}
+        {isChatOpen && roomId && <ChatPanel roomId={roomId} messages={messages} setMessages={setMessages} onClose={() => setIsChatOpen(false)} />}
+        {isInsightsOpen && roomId && <SmartInsights roomId={roomId} chatMessages={messages} onClose={() => setIsInsightsOpen(false)} />}
         {isParticipantsOpen && roomId && (
           <ParticipantsList 
             roomId={roomId} participants={activeParticipants} waitingParticipants={waitingParticipants}

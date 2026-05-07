@@ -54,26 +54,63 @@ const Dashboard = () => {
 
   return (
     <div className="page-container">
-      <nav className="navbar">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Video size={28} style={{ color: 'var(--primary-color)' }} />
-          <h2 style={{ margin: 0 }}>Meetings</h2>
+      <nav className="navbar" style={{ border: 'none', padding: '1.5rem 0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div style={{ background: 'var(--primary-color)', padding: '0.5rem', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 20px rgba(124, 58, 237, 0.3)' }}>
+            <Video size={24} color="white" />
+          </div>
+          <h2 style={{ margin: 0, letterSpacing: '-0.5px' }}>SyncUp</h2>
         </div>
         <div className="user-controls">
-          <span style={{ fontWeight: 500 }}>Welcome, {user?.fullName}</span>
-          <button className="btn-secondary" onClick={logout}>Logout</button>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: '0.8rem', opacity: 0.6 }}>Logged in as</div>
+            <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{user?.fullName}</div>
+          </div>
+          <button className="btn-secondary" style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }} onClick={logout}>Logout</button>
         </div>
       </nav>
+
+      <div style={{ marginBottom: '3rem', marginTop: '1rem' }}>
+        <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>Hello, {user?.fullName.split(' ')[0]}! 👋</h1>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem' }}>Ready to start your next collaboration?</p>
+      </div>
       
       <main className="dashboard-content">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-          <h1 style={{ margin: 0 }}>Dashboard</h1>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '2rem', alignItems: 'flex-end', marginBottom: '2.5rem' }}>
+          <div className="glass-card floating" style={{ padding: '1.5rem', display: 'flex', gap: '1rem', alignItems: 'center' }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem', opacity: 0.8 }}>JOIN A MEETING</div>
+              <input 
+                type="text" 
+                placeholder="Enter meeting ID or link..." 
+                className="form-input" 
+                style={{ padding: '0.75rem 1rem' }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    const val = (e.target as HTMLInputElement).value;
+                    if (val) {
+                      const id = val.includes('/') ? val.split('/').pop() : val;
+                      navigate(`/meeting/${id}`);
+                    }
+                  }
+                }}
+              />
+            </div>
+            <button className="btn-primary" style={{ marginTop: '1.6rem' }} onClick={() => {
+              const input = document.querySelector('input') as HTMLInputElement;
+              if (input.value) {
+                const id = input.value.includes('/') ? input.value.split('/').pop() : input.value;
+                navigate(`/meeting/${id}`);
+              }
+            }}>Join</button>
+          </div>
+
           <div style={{ display: 'flex', gap: '1rem' }}>
-            <button className="btn-secondary" onClick={handleQuickMeeting}>
-              Start Instant
+            <button className="btn-secondary" style={{ padding: '1rem 2rem' }} onClick={handleQuickMeeting}>
+              Instant Meeting
             </button>
-            <button className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }} onClick={() => setIsModalOpen(true)}>
-              <Plus size={18} /> Schedule
+            <button className="btn-primary" style={{ padding: '1rem 2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }} onClick={() => setIsModalOpen(true)}>
+              <Plus size={20} /> Schedule New
             </button>
           </div>
         </div>

@@ -43,3 +43,41 @@ export const generateMeetingSummary = async (transcript: string) => {
     throw new Error('Failed to generate AI summary');
   }
 };
+export const analyzeMeetingMood = async (content: string) => {
+  if (!process.env.GEMINI_API_KEY) {
+    return {
+      mood: "Neutral",
+      sentimentScore: 50,
+      insights: ["AI analysis is disabled (missing API key)."]
+    };
+  }
+
+  try {
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+
+    const prompt = `
+      Analyze the following chat/transcript from a professional meeting.
+      Determine the overall mood (e.g., Productive, Tense, Enthusiastic, Calm) and a sentiment score from 0 to 100 (100 being extremely positive).
+      Also, provide 2-3 brief insights or suggestions for the host to improve the meeting engagement.
+      
+      Content:
+      "${content}"
+      
+      Respond ONLY in the following JSON format:
+      {
+        "mood": "Mood Name",
+        "sentimentScore": 75,
+        "insights": ["Insight 1", "Insight 2"]
+      }
+    `;
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+    const cleanedText = text.replace(/```json|```/g, '').trim();
+    return JSON.parse(cleanedText);
+  } catch (error) {
+    console.error('Error in analyzeMeetingMood:', error);
+    return { mood: "Unknown", sentimentScore: 50, insights: ["Error performing analysis."] };
+  }
+};

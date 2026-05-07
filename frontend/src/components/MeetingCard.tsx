@@ -31,7 +31,7 @@ export const MeetingCard = ({ meeting }: MeetingProps) => {
   };
 
   return (
-    <div className="glass-card meeting-card">
+    <div className="glass-card meeting-card clickable">
       <div className="meeting-card-header">
         <div>
           <h3 className="meeting-title">{meeting.title}</h3>

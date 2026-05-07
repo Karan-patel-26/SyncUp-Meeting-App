@@ -17,12 +17,13 @@ interface Message {
 
 interface ChatPanelProps {
   roomId: string;
+  messages: Message[];
+  setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
   onClose: () => void;
 }
 
-export const ChatPanel = ({ roomId, onClose }: ChatPanelProps) => {
+export const ChatPanel = ({ roomId, messages, setMessages, onClose }: ChatPanelProps) => {
   const { user } = useAuth();
-  const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
