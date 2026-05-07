@@ -1,21 +1,21 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
-import { signup, login, refresh, logout, getProfile } from '../controllers/auth.controller';
+import { signup, login, refresh, logout, getProfile, requestOTP, loginWithOTP } from '../controllers/auth.controller';
 import { requireAuth } from '../middlewares/auth.middleware';
 
 const router = Router();
 
-// Rate limit for authentication attempts
+// Rate limit for authentication attempts (disabled in dev)
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // Limit each IP to 5 requests per `window` (here, per 15 minutes)
-  message: { message: 'Too many login/signup attempts from this IP, please try again after 15 minutes' },
-  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  windowMs: 15 * 60 * 1000,
+  max: 1000, // Effectively disabled
+  message: { message: 'Too many login/signup attempts' },
 });
 
 router.post('/signup', authLimiter, signup);
 router.post('/login', authLimiter, login);
+router.post('/request-otp', authLimiter, requestOTP);
+router.post('/login-otp', authLimiter, loginWithOTP);
 router.post('/refresh', refresh);
 router.post('/logout', logout);
 router.get('/me', requireAuth, getProfile);

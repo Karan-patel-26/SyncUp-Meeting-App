@@ -1,5 +1,5 @@
-import * as SelfieSegmentationNamespace from '@mediapipe/selfie_segmentation';
-const { SelfieSegmentation } = SelfieSegmentationNamespace;
+// Using global SelfieSegmentation from CDN script in index.html
+const SelfieSegmentation = (window as any).SelfieSegmentation;
 
 export type EffectType = 'none' | 'blur' | 'office' | 'studio' | 'minimal';
 

@@ -142,12 +142,14 @@ export const Whiteboard = ({ roomId, onClose }: WhiteboardProps) => {
           <button 
             className={`tool-btn ${tool === 'pencil' ? 'active' : ''}`}
             onClick={() => setTool('pencil')}
+            title="Pencil"
           >
             <Pencil size={20} />
           </button>
           <button 
             className={`tool-btn ${tool === 'eraser' ? 'active' : ''}`}
             onClick={() => setTool('eraser')}
+            title="Eraser"
           >
             <Eraser size={20} />
           </button>
@@ -164,14 +166,14 @@ export const Whiteboard = ({ roomId, onClose }: WhiteboardProps) => {
           ))}
         </div>
 
-        <div className="tool-group" style={{ marginLeft: 'auto' }}>
-          <button className="tool-btn" onClick={clearCanvas} title="Clear All">
+        <div className="tool-group" style={{ marginLeft: 'auto', gap: '0.75rem' }}>
+          <button className="tool-btn" onClick={clearCanvas} title="Clear All Canvas">
             <Trash2 size={20} />
           </button>
-          <button className="tool-btn" onClick={downloadCanvas} title="Download Image">
+          <button className="tool-btn" onClick={downloadCanvas} title="Download as Image">
             <Download size={20} />
           </button>
-          <button className="tool-btn danger" onClick={onClose}>
+          <button className="tool-btn danger" onClick={onClose} title="Close Whiteboard">
             <X size={20} />
           </button>
         </div>

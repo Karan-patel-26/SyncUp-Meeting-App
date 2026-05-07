@@ -73,6 +73,33 @@ export const getMeetingById = async (req: Request, res: Response): Promise<void>
   }
 };
 
+export const endMeeting = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const userId = req.userId;
+
+    const meeting = await Meeting.findById(id);
+
+    if (!meeting) {
+      res.status(404).json({ message: 'Meeting not found' });
+      return;
+    }
+
+    if (meeting.host.toString() !== userId) {
+      res.status(403).json({ message: 'Only the host can end the meeting' });
+      return;
+    }
+
+    meeting.status = 'completed';
+    meeting.endTime = new Date();
+    await meeting.save();
+
+    res.status(200).json({ message: 'Meeting ended successfully', meeting });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error ending meeting' });
+  }
+};
+
 export const updateMeetingStatus = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;

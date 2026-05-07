@@ -72,47 +72,44 @@ const MeetingRoom = () => {
   const transcriptRef = useRef<string[]>([]);
   const rawStreamRef = useRef<MediaStream | null>(null);
 
-  useEffect(() => {
-    if (!roomId || !user) return;
 
-    const initialize = async () => {
-      try {
-        const res = await api.get(`/meetings/${roomId}`);
-        const meeting = res.data.meeting;
-        setMeetingHostId(meeting.host._id || meeting.host);
-        
-        const isHost = (meeting.host._id || meeting.host) === user.id;
-        if (!isHost) {
-          if (meeting.password) {
-            setNeedsPassword(true);
-            return;
-          }
-          if (meeting.waitingRoom) {
-            setIsWaiting(true);
-            socket.connect();
-            socket.emit('join-waiting-room', roomId, { id: user.id, fullName: user.fullName });
-            setupWaitingListeners();
-            return;
-          }
-        }
 
-        setIsAccessGranted(true);
-        startMeeting(meeting);
-      } catch (err: any) {
-        console.error('Error during room initialization:', err);
-        setError(err.response?.data?.message || 'Could not initialize meeting room.');
-      }
-    };
+  const stopStreams = () => {
+    if (localStream) {
+      localStream.getTracks().forEach(track => track.stop());
+    }
+    if (screenStream) {
+      screenStream.getTracks().forEach(track => track.stop());
+    }
+    setLocalStream(null);
+    setScreenStream(null);
+  };
 
-    initialize();
+  const exitMeeting = () => {
+    stopStreams();
+    socket.disconnect();
+    navigate('/');
+  };
 
-    return () => {
-      socket.off('participant-waiting');
-      socket.off('access-granted');
-      socket.off('access-denied');
-      socket.disconnect();
-    };
-  }, [roomId, user]);
+  const handleEndMeeting = async () => {
+    if (!window.confirm('Are you sure you want to end this meeting for everyone?')) return;
+    try {
+      await api.patch(`/meetings/${roomId}/end`);
+      socket.emit('end-meeting', roomId);
+      exitMeeting();
+    } catch (error) {
+      console.error('Failed to end meeting', error);
+      exitMeeting();
+    }
+  };
+
+  const handleLeave = () => {
+    if (meetingHostId === user?.id) {
+      handleEndMeeting();
+    } else {
+      exitMeeting();
+    }
+  };
 
   const setupWaitingListeners = () => {
     socket.on('access-granted', (userId: string) => {
@@ -273,11 +270,16 @@ const MeetingRoom = () => {
       }
     });
 
-    socket.on('kick-remote-user', (targetUserId: string) => {
-      if (targetUserId === user.id) {
-        alert('You have been removed from the meeting by the host.');
-        navigate('/');
+    socket.on('kick-remote-user', (userId: string) => {
+      if (user && userId === user.id) {
+        alert('You have been removed from the meeting');
+        handleLeave();
       }
+    });
+
+    socket.on('meeting-ended', () => {
+      alert('The host has ended this meeting');
+      handleLeave();
     });
   };
 
@@ -476,16 +478,47 @@ const MeetingRoom = () => {
     }
   };
 
-  const handleLeave = async () => {
-    if (meetingHostId === user?.id && transcriptRef.current.length > 0) {
+  useEffect(() => {
+    if (!roomId || !user) return;
+
+    const initialize = async () => {
       try {
-        await api.post(`/meetings/${roomId}/summarize`, { transcript: transcriptRef.current.join(' ') });
-      } catch (err) {
-        console.error('Failed to generate summary', err);
+        const res = await api.get(`/meetings/${roomId}`);
+        const meeting = res.data.meeting;
+        setMeetingHostId(meeting.host._id || meeting.host);
+        
+        const isHost = (meeting.host._id || meeting.host) === user.id;
+        if (!isHost) {
+          if (meeting.password) {
+            setNeedsPassword(true);
+            return;
+          }
+          if (meeting.waitingRoom) {
+            setIsWaiting(true);
+            socket.connect();
+            socket.emit('join-waiting-room', roomId, { id: user.id, fullName: user.fullName });
+            setupWaitingListeners();
+            return;
+          }
+        }
+
+        setIsAccessGranted(true);
+        startMeeting(meeting);
+      } catch (err: any) {
+        console.error('Error during room initialization:', err);
+        setError(err.response?.data?.message || 'Could not initialize meeting room.');
       }
-    }
-    navigate('/');
-  };
+    };
+
+    initialize();
+
+    return () => {
+      socket.off('participant-waiting');
+      socket.off('access-granted');
+      socket.off('access-denied');
+      socket.disconnect();
+    };
+  }, [roomId, user]);
 
   const toggleQuality = () => {
     const next = videoQuality === '720p' ? '360p' : '720p';

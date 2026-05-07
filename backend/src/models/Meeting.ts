@@ -10,6 +10,7 @@ export interface IMeeting extends Document {
   actionItems?: string[];
   password?: string;
   waitingRoom: boolean;
+  scheduledAt?: Date;
   startTime?: Date;
   endTime?: Date;
 }
@@ -55,6 +56,10 @@ const meetingSchema = new Schema<IMeeting>(
     waitingRoom: {
       type: Boolean,
       default: false,
+    },
+    scheduledAt: {
+      type: Date,
+      default: Date.now,
     },
     startTime: {
       type: Date,

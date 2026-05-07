@@ -1,11 +1,14 @@
 import mongoose, { Document, Schema } from 'mongoose';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 
 export interface IUser extends Document {
   fullName: string;
   email: string;
   password?: string;
   avatar?: string;
+  otp?: string;
+  otpExpiry?: Date;
+  isVerified: boolean;
   comparePassword(candidatePassword: string): Promise<boolean>;
 }
 
@@ -26,12 +29,24 @@ const userSchema = new Schema<IUser>(
     },
     password: {
       type: String,
-      required: true,
-      select: false, // Don't return password by default
+      required: false, // Make optional for OTP-only users
+      select: false,
+    },
+    otp: {
+      type: String,
+      select: false,
+    },
+    otpExpiry: {
+      type: Date,
+      select: false,
     },
     avatar: {
       type: String,
       default: '',
+    },
+    isVerified: {
+      type: Boolean,
+      default: true,
     },
   },
   {

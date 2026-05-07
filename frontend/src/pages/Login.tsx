@@ -34,7 +34,11 @@ const Login = () => {
       login(accessToken, user);
       navigate('/');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Invalid email or password.');
+      if (!err.response) {
+        setError('Connection to server failed. Please ensure the backend is running on port 5000.');
+      } else {
+        setError(err.response?.data?.message || 'Invalid email or password.');
+      }
     } finally {
       setIsLoading(false);
     }

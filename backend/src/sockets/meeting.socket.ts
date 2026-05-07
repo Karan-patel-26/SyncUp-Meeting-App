@@ -125,6 +125,15 @@ export const setupMeetingSockets = (io: Server) => {
       socket.to(roomId).emit('notes-update', delta);
     });
 
+    socket.on('get-initial-notes', async (roomId: string) => {
+      if (isRedisConnected) {
+        const notes = await redisClient.get(`room:${roomId}:notes`);
+        if (notes) socket.emit('initial-notes', notes);
+      } else if (localNotes[roomId]) {
+        socket.emit('initial-notes', localNotes[roomId]);
+      }
+    });
+
     // Waiting Room Logic
     socket.on('join-waiting-room', (roomId: string, user: any) => {
       socket.join(`waiting:${roomId}`);
@@ -151,6 +160,11 @@ export const setupMeetingSockets = (io: Server) => {
     // Admin Actions: Kick User
     socket.on('kick-user', (roomId: string, targetUserId: string) => {
       io.to(roomId).emit('kick-remote-user', targetUserId);
+    });
+
+    // End Meeting for all
+    socket.on('end-meeting', (roomId: string) => {
+      socket.to(roomId).emit('meeting-ended');
     });
 
   });

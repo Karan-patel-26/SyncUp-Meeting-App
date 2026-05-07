@@ -20,7 +20,8 @@ export const MeetingCard = ({ meeting }: MeetingProps) => {
   const navigate = useNavigate();
   const [showSummary, setShowSummary] = useState(false);
   const [copied, setCopied] = useState(false);
-  const formattedDate = format(new Date(meeting.scheduledAt), 'MMM d, yyyy h:mm a');
+  const meetingDate = meeting.scheduledAt ? new Date(meeting.scheduledAt) : new Date();
+  const formattedDate = isNaN(meetingDate.getTime()) ? 'No date set' : format(meetingDate, 'MMM d, yyyy h:mm a');
 
   const copyToClipboard = () => {
     const url = `${window.location.origin}/meeting/${meeting._id}`;
