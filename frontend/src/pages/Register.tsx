@@ -37,7 +37,7 @@ const Register = () => {
       navigate('/');
     } catch (err: any) {
       if (!err.response) {
-        setError('Connection to server failed. Please ensure the backend is running on port 5000.');
+        setError('Connection to server failed. Please ensure the backend is running.');
       } else {
         setError(err.response?.data?.message || 'Registration failed. Please try again.');
       }

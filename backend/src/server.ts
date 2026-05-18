@@ -2,6 +2,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import express, { Request, Response } from 'express';
+import path from 'path';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -21,9 +22,13 @@ import compression from 'compression';
 
 const app = express();
 const httpServer = createServer(app);
+const isProduction = process.env.NODE_ENV === 'production';
+
 const io = new Server(httpServer, {
   cors: {
-    origin: [process.env.FRONTEND_URL || 'http://localhost:5173', 'http://127.0.0.1:5173'],
+    origin: isProduction
+      ? process.env.FRONTEND_URL || true
+      : [process.env.FRONTEND_URL || 'http://localhost:5173', 'http://127.0.0.1:5173'],
     methods: ['GET', 'POST'],
     credentials: true
   }
@@ -39,8 +44,8 @@ const limiter = rateLimit({
 });
 
 // Middlewares
-if (process.env.NODE_ENV === 'production') {
-  app.use(helmet());
+if (isProduction) {
+  app.use(helmet({ contentSecurityPolicy: false }));
   app.use(limiter);
 }
 
@@ -93,6 +98,18 @@ app.get('/api/health', (req: Request, res: Response) => {
   });
 });
 
+// Serve React frontend in production
+if (isProduction) {
+  const frontendDist = path.join(__dirname, '..', '..', 'frontend', 'dist');
+  app.use(express.static(frontendDist));
+  // Catch-all: serve index.html for any non-API route (React Router)
+  app.get('*', (req: Request, res: Response) => {
+    if (!req.path.startsWith('/api') && !req.path.startsWith('/socket.io')) {
+      res.sendFile(path.join(frontendDist, 'index.html'));
+    }
+  });
+}
+
 // Socket.io connection logic
 setupMeetingSockets(io);
 
@@ -105,8 +122,8 @@ mongoose
   .then(async () => {
     logger.info('Successfully connected to MongoDB');
     await connectRedis(); 
-    httpServer.listen(Number(PORT), '127.0.0.1', () => {
-      logger.info(`Server is running on http://127.0.0.1:${PORT}`);
+    httpServer.listen(Number(PORT), '0.0.0.0', () => {
+      logger.info(`Server is running on port ${PORT}`);
     });
   })
   .catch((error) => {

@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { Meeting } from '../models/Meeting';
 import { Recording } from '../models/Recording';
 import { invalidateCache } from '../middlewares/cache.middleware';
-import { generateMeetingSummary } from '../services/ai.service';
+import { generateMeetingSummary, analyzeMeetingMood } from '../services/ai.service';
 import cloudinary from '../config/cloudinary';
 import streamifier from 'streamifier';
 import bcrypt from 'bcryptjs';
@@ -278,7 +278,7 @@ export const analyzeMood = async (req: Request, res: Response): Promise<void> =>
       return;
     }
 
-    const analysis = await import('../services/ai.service').then(m => m.analyzeMeetingMood(content));
+    const analysis = await analyzeMeetingMood(content);
     res.status(200).json(analysis);
   } catch (error) {
     console.error('Error analyzing mood:', error);

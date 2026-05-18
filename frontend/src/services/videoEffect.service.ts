@@ -20,7 +20,7 @@ class VideoEffectService {
     this.video.playsInline = true;
 
     this.segmentation = new SelfieSegmentation({
-      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/${file}`,
+      locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/${file}`,
     });
 
     this.segmentation.setOptions({

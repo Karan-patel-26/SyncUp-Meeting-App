@@ -1,8 +1,9 @@
 import axios from 'axios';
 
 // Create an Axios instance
+// In production (same-origin), use relative path so no CORS issue is needed
 const api = axios.create({
-  baseURL: 'http://127.0.0.1:5000/api',
+  baseURL: import.meta.env.VITE_API_URL || '/api',
 });
 
 // Request Interceptor: Attach the JWT token if it exists
