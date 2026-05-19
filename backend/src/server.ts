@@ -103,9 +103,11 @@ if (isProduction) {
   const frontendDist = path.join(__dirname, '..', '..', 'frontend', 'dist');
   app.use(express.static(frontendDist));
   // Catch-all: serve index.html for any non-API route (React Router)
-  app.get('*', (req: Request, res: Response) => {
-    if (!req.path.startsWith('/api') && !req.path.startsWith('/socket.io')) {
+  app.use((req: Request, res: Response, next) => {
+    if (req.method === 'GET' && !req.path.startsWith('/api') && !req.path.startsWith('/socket.io')) {
       res.sendFile(path.join(frontendDist, 'index.html'));
+    } else {
+      next();
     }
   });
 }
